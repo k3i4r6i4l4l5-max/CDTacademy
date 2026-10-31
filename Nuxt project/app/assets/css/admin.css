@@ -1,0 +1,56 @@
+/* Warm terracotta, sage and sand surfaces from College-site. */
+@layer components {
+  .admin-section-nav { @apply my-8 flex flex-wrap gap-1.5 rounded-2xl border border-[#e7e0d8] bg-[#f0ece7] p-1.5; }
+  .admin-section-nav button { @apply flex-1 whitespace-nowrap rounded-xl px-4 py-3 text-[13px] font-medium text-[#71685f] transition-colors hover:bg-white/70 hover:text-ink; }
+  .admin-section-nav button.active { @apply bg-accent text-white; box-shadow:0 3px 9px #b85e3226; }
+  .people-heading { @apply mb-7 flex flex-wrap items-center justify-between gap-5; }
+  .people-eyebrow { @apply text-[10px] font-semibold uppercase tracking-[.12em] text-accent; }
+  .people-heading h2 { @apply mt-2 text-[28px] font-medium tracking-[-.7px]; }
+  .people-heading p { @apply mt-2 text-sm leading-6 text-muted; }
+  .people-summary { @apply mt-4 flex flex-wrap gap-2; }
+  .people-chip { @apply inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-medium; }
+  .tone-student { background:#eef3e8; color:#4f6148; border-color:#dce6d2; }
+  .tone-teacher { background:#f6edda; color:#806139; border-color:#eaddc3; }
+  .tone-admin { background:#f9e9df; color:#a0522e; border-color:#eed3c2; }
+  .role-text-student { color:#4f6148; }
+  .role-text-teacher { color:#806139; }
+  .role-text-admin { color:#a0522e; }
+  .people-alert { @apply mb-5 rounded-xl border px-4 py-3 text-sm leading-6; }
+  .people-alert-error { @apply border-[#edc8b4] bg-[#fff1e8] text-[#914321]; }
+  .people-alert-success { @apply border-[#d3e0cb] bg-[#eff5eb] text-[#4f6148]; }
+  .people-create { @apply mb-7 grid overflow-hidden rounded-2xl border border-[#e8d5c8] bg-white lg:grid-cols-[240px_1fr]; box-shadow:0 6px 20px #624c3510; }
+  .people-create-intro { @apply bg-[#f8eae0] p-6; }
+  .people-symbol { @apply mb-5 grid size-11 place-items-center rounded-xl border border-[#e9c3ab] bg-[#fff7f0] text-3xl font-light text-accent; }
+  .people-create-intro h3 { @apply text-xl font-medium tracking-tight; }
+  .people-create-intro p { @apply mt-3 mb-5 text-sm leading-7 text-[#8b6a55]; }
+  .people-create-form { @apply grid gap-5 p-6 sm:grid-cols-2; }
+  .people-create-form label { @apply text-xs font-medium text-[#67594e]; }
+  .people-form-actions { @apply flex flex-wrap items-center gap-5 sm:col-span-2; }
+  .people-toolbar { @apply mb-6 flex flex-wrap items-center gap-4; }
+  .people-toolbar .field { @apply max-w-sm rounded-lg bg-white; }
+  .people-columns { @apply grid items-start gap-6; }
+  .people-columns-admin { @apply xl:grid-cols-[1fr_1.12fr]; }
+  .people-section { @apply min-w-0 overflow-hidden rounded-2xl border border-[#e5dfd5] bg-white; box-shadow:0 3px 12px #3d2f2405; }
+  .people-section-heading { @apply flex items-center gap-3 border-b border-[#e5dfd5] px-5 py-5; }
+  .people-section-green { background:#f0f4eb; }
+  .people-section-peach { background:#faf0e8; }
+  .people-section-mark { @apply grid size-10 shrink-0 place-items-center rounded-xl border text-lg font-medium; }
+  .people-section-heading h3 { @apply text-[15px] font-semibold; }
+  .people-section-heading p { @apply mt-1 text-xs leading-5 text-muted; }
+  .people-count { @apply ml-auto rounded-md border border-white bg-white/70 px-2.5 py-1 font-mono text-xs text-[#786c60]; }
+  .people-student-row, .people-role-row { @apply grid gap-4 border-b border-[#eee9e2] px-5 py-5 transition-colors hover:bg-[#fdfbf8]; }
+  .people-person { @apply flex min-w-0 items-center gap-3; }
+  .people-avatar { @apply grid size-10 shrink-0 place-items-center rounded-xl text-sm font-semibold; }
+  .people-name { @apply break-words text-sm font-semibold text-ink; }
+  .people-group-label, .people-role-caption { @apply mt-1 inline-block text-xs; }
+  .people-group-label { @apply text-[#7d8673]; }
+  .people-group-controls, .people-role-controls { @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2; }
+  .people-group-controls .field, .people-role-controls .field { @apply rounded-lg py-2 text-xs; }
+  .people-save { @apply whitespace-nowrap rounded-lg border border-[#e5c8b5] bg-[#faf0e8] px-3 py-2.5 text-xs font-medium text-[#a0522e] transition-colors hover:bg-[#f3dfd0]; }
+  .people-save-green { @apply border-[#d0dfc4] bg-[#eff4e9] text-[#4f6148] hover:bg-[#e1ecd8]; }
+  .people-section-foot { @apply flex items-center gap-2 bg-[#fdfbf8] px-5 py-4 text-[11px] leading-5 text-muted; }
+  .people-status-dot { @apply size-1.5 shrink-0 rounded-full bg-[#80936d]; }
+  .people-empty { @apply px-5 py-8 text-sm leading-6 text-muted; }
+  @media(min-width:1500px) { .people-role-row { grid-template-columns:minmax(110px,1fr) minmax(0,1.15fr); align-items:center; } }
+  @media(max-width:639px) { .admin-section-nav { @apply grid grid-cols-2; } .admin-section-nav button { @apply whitespace-normal px-2 text-xs; } .people-heading h2 { @apply text-2xl; } .people-create-form { @apply p-5; } .people-section-heading { @apply px-4; } .people-student-row, .people-role-row { @apply px-4; } .people-toolbar .field { @apply max-w-none; } }
+}

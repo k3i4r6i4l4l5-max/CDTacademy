@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@import "./auth.css";
+@import "./admin.css";
+
+@theme {
+  --color-paper: #faf9f6;
+  --color-ink: #282725;
+  --color-muted: #716d66;
+  --color-accent: #b85e32;
+  --color-line: #e5e1db;
+  --color-soft: #f4f1ec;
+  --color-success: #416b50;
+  --font-sans: 'Segoe UI Variable', 'Segoe UI', Arial, sans-serif;
+}
+@layer base {
+  body { @apply m-0 bg-paper font-sans text-ink antialiased; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .5; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+  ::selection { background: #ead4c3; }
+}
+@layer components {
+  .field { @apply block w-full min-w-0 rounded-md border border-line bg-white px-3 py-2.5 text-sm text-ink; }
+  .panel { @apply rounded-[11px] border border-line bg-white p-5 sm:p-7; box-shadow: 0 2px 3px #28272503; }
+  .button-primary { @apply inline-flex items-center justify-center gap-5 rounded-md bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-[#9e4e28]; }
+  .button-secondary { @apply inline-flex items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm transition-colors hover:bg-soft; }
+  .page-title { font-family: 'Segoe UI Variable', 'Segoe UI', Arial, sans-serif; @apply text-4xl font-normal leading-tight tracking-[-1.3px] sm:text-[44px]; }
+  .code-editor { tab-size: 2; }
+}
+
+/* Layout, sizes and surfaces ported from College-site's final navbar/sidebar rules. */
+@layer components {
+  .reference-navbar { position: relative; z-index: 30; width: min(760px,calc(100% - 32px)); height: 64px; margin: 18px auto 0; border: 1px solid #e5dfd7; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(65,48,35,.08); }
+  .reference-nav-inner { display:flex; height:100%; align-items:center; gap:28px; padding:0 10px 0 18px; }
+  .reference-brand { display:flex; gap:9px; align-items:center; font-size:19px; font-weight:600; letter-spacing:-1px; }
+  .reference-brand-mark { display:grid; place-items:center; width:29px; height:29px; background:#d97745; color:#fff6ef; border-radius:7px; font-size:21px; font-weight:400; }
+  .reference-nav-switch { position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:292px; height:42px; }
+  .reference-nav-switch a { position:relative; z-index:1; display:grid; place-items:center; border-radius:10px; color:#706860; font-size:13px; }
+  .reference-nav-switch a.active { color:white; }
+  .reference-nav-indicator { position:absolute; inset:1px auto 1px 0; width:33.333%; border-radius:10px; background:#b85e32; box-shadow:0 5px 13px rgba(184,94,50,.24); transition:transform .38s cubic-bezier(.22,1,.36,1); }
+  .reference-profile { position:relative; margin-left:auto; }
+  .reference-profile-button { height:42px; display:flex; align-items:center; gap:9px; padding:4px 15px 4px 5px; border:1px solid #b85e32; border-radius:999px; background:#b85e32; color:white; box-shadow:0 6px 15px rgba(184,94,50,.2); font-size:13px; font-weight:600; white-space:nowrap; }
+  .reference-avatar { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.92); color:#a34e29; }
+  .reference-popover { position:absolute; right:0; top:52px; width:260px; padding:22px; border:1px solid #e5dfd7; border-radius:12px; background:white; box-shadow:0 12px 32px #3d2f241c; }
+  .reference-shell { display:grid; grid-template-columns:clamp(280px,19vw,340px) minmax(0,1fr) clamp(280px,19vw,340px); gap:24px; padding:0 16px; }
+  .learning-shell { display:grid; grid-template-columns:270px minmax(0,1fr) 270px; gap:24px; padding:0 16px; }
+  .learning-program, .learning-summary { position:sticky; top:43px; align-self:start; margin-top:25px; margin-bottom:30px; padding:22px; border:1px solid #e7e0d8; border-radius:18px; background:white; box-shadow:12px 14px 34px rgba(61,47,36,.075); }
+  .learning-summary { margin-top:25px; }
+  .reference-sidebar { position:sticky; top:43px; display:flex; flex-direction:column; align-self:start; min-height:620px; height:calc(100dvh - 110px); margin-top:-39px; margin-bottom:43px; padding:22px; border:1px solid #e7e0d8; border-radius:18px; background:white; box-shadow:12px 14px 34px rgba(61,47,36,.075); }
+  .reference-side-link { display:flex; justify-content:space-between; align-items:center; padding:14px 12px; border:1px solid #ece5dd; border-radius:11px; font-size:13px; }
+  .reference-side-link.router-link-exact-active { background:#f6eee7; border-color:#dec8b7; color:#a44f2a; }
+  .eyebrow { font-family:'Trebuchet MS','Segoe UI',sans-serif; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#9b7157; }
+  .reference-footer { display:flex; justify-content:space-between; gap:20px; max-width:1160px; margin:0 auto; padding:26px 32px; font-size:12px; color:#716d66; }
+  @media(max-width:1280px) { .reference-shell { display:block; padding:0; } .reference-sidebar { display:none; } .learning-shell { grid-template-columns:250px minmax(0,1fr); } .learning-summary { display:none; } }
+  @media(max-width:1023px) { .learning-shell { display:block; padding:0; } .learning-program { position:static; margin:24px 20px 0; padding:18px; } }
+  @media(max-width:700px) { .reference-navbar { width:calc(100% - 20px); height:96px; margin-top:10px; border-radius:14px; } .reference-nav-inner { flex-wrap:wrap; align-content:center; gap:6px 12px; padding:6px 10px 7px 14px; } .reference-brand { height:38px; } .reference-nav-switch { order:3; width:100%; height:34px; } .reference-nav-switch a { font-size:11px; } .reference-profile-button { height:36px; font-size:11px; } .reference-avatar { width:26px;height:26px; } .reference-profile-label { max-width:105px; overflow:hidden; text-overflow:ellipsis; } .reference-footer { padding:24px 20px; font-size:10px; } }
+  @media(prefers-reduced-motion:reduce) { .reference-nav-indicator { transition:none; } }
+}
