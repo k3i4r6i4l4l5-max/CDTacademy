@@ -26,8 +26,8 @@
 .admin-section-nav button:hover { color: var(--color-ink); background: #faf8f2; }
 .admin-section-nav button.active { color: var(--color-ink); background: var(--surface); border-color: var(--color-line); font-weight: 600; }
 .admin-nav-count { padding: .05rem .35rem; border-radius: 5px; background: #f4e7d2; color: #75542c; font-size: .7rem; }
-.desk-header.staff-header-compact { margin-bottom: 1.25rem; }
-.staff-header-compact .page-title { font-size: clamp(1.55rem, 3vw, 2.2rem); }
+.desk-header.staff-header { margin-bottom: 1.25rem; }
+.staff-header .page-title { font-size: clamp(1.55rem, 3vw, 2.2rem); }
 .people-alert { margin-bottom: 1rem; padding: .75rem 1rem; border: 1px solid; border-radius: 9px; font-size: .875rem; line-height: 1.5; }
 .people-alert-error { border-color: #e8c7b7; background: #faf0e9; color: var(--accent-hover); }
 .people-alert-success { border-color: #d4dfd0; background: #edf3e9; color: var(--color-success); }

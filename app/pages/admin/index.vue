@@ -32,9 +32,6 @@ const filterTest = ref(''), filterStudent = ref(''), maxPercent = ref<number | '
 const testStatus = ref('all')
 const testQuery = ref('')
 const editorTitle = ref<HTMLElement>()
-watch(tab, section => {
-  if (section === 'tests' && draft.value) nextTick(() => editorTitle.value?.focus())
-})
 const grades = ref<Record<string, { points: number; comment: string }>>({})
 const attempts = computed(() => (submissions.value || []).map(submission => {
   const result = resultOf(submission)
@@ -109,11 +106,11 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
 </script>
 <template>
   <main class="workspace-page">
-    <header class="desk-header enter" :class="{ 'staff-header-compact': tab !== 'overview' }">
+    <header class="desk-header staff-header">
       <div>
         <p class="eyebrow">{{ isAdmin ? 'Кабинет администратора' : 'Кабинет преподавателя' }}</p>
         <h1 class="page-title">Управление обучением</h1>
-        <p v-if="tab === 'overview'" class="desk-lead">{{ isAdmin ? 'Управляйте материалами, участниками и результатами обучения.' : 'Готовьте материалы для занятий и проверяйте работы студентов.' }}</p>
+        <p class="desk-lead">{{ isAdmin ? 'Управляйте материалами, участниками и результатами обучения.' : 'Готовьте материалы для занятий и проверяйте работы студентов.' }}</p>
       </div>
     </header>
 
