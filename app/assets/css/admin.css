@@ -1,0 +1,53 @@
+.admin-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-block: 0 1.65rem;
+  padding: .35rem;
+  border: 1px solid var(--color-line);
+  border-radius: 11px;
+  background: var(--color-soft);
+}
+.admin-section-nav button {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 39px;
+  padding: .4rem .65rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--color-muted);
+  font-size: .8125rem;
+  text-align: center;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.admin-section-nav button:hover { color: var(--color-ink); background: #faf8f2; }
+.admin-section-nav button.active { color: var(--color-ink); background: var(--surface); border-color: var(--color-line); font-weight: 600; }
+.admin-nav-count { padding: .05rem .35rem; border-radius: 5px; background: #f4e7d2; color: #75542c; font-size: .7rem; }
+.desk-header.staff-header-compact { margin-bottom: 1.25rem; }
+.staff-header-compact .page-title { font-size: clamp(1.55rem, 3vw, 2.2rem); }
+.people-alert { margin-bottom: 1rem; padding: .75rem 1rem; border: 1px solid; border-radius: 9px; font-size: .875rem; line-height: 1.5; }
+.people-alert-error { border-color: #e8c7b7; background: #faf0e9; color: var(--accent-hover); }
+.people-alert-success { border-color: #d4dfd0; background: #edf3e9; color: var(--color-success); }
+.staff-editor { max-width: 56rem; }
+.roster { container-type: inline-size; }
+.roster-row { display: grid; align-items: center; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: .85rem; padding: .85rem clamp(.8rem, 2vw, 1.25rem); }
+.roster-admin .roster-row { grid-template-columns: minmax(0, .8fr) minmax(0, 1.1fr) minmax(0, 1.1fr); }
+.roster-head { color: var(--color-muted); background: var(--color-soft); border-radius: 13px 13px 0 0; font-size: .75rem; font-weight: 600; }
+.roster-control { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.roster-control .field { flex: 1 1 7rem; min-height: 36px; width: auto; max-width: 100%; padding-block: .4rem; font-size: .8125rem; }
+.roster-control .button-secondary { min-height: 36px; padding-inline: .65rem; font-size: .75rem; }
+@container (max-width: 650px) {
+  .roster-admin .roster-row { grid-template-columns: minmax(0, 1fr); }
+  .roster-admin .roster-head, .roster-admin .roster-no-group { display: none; }
+}
+@container (max-width: 460px) {
+  .roster-row { grid-template-columns: minmax(0, 1fr); }
+  .roster-head { display: none; }
+}
+@media (max-width: 640px) {
+  .admin-section-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-section-nav button { padding-inline: .4rem; font-size: .75rem; }
+}

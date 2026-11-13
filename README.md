@@ -29,6 +29,7 @@ Vue, Vite, Nitro и H3 подключаются через Nuxt. Точные в
 В PowerShell:
 
 ```powershell
+cd "C:\Users\cyber\Desktop\CDTacademy"
 npm ci
 npm run dev
 ```
