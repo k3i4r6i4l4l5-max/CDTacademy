@@ -2,7 +2,7 @@
 import { lessons } from '~/data/course'
 
 const { user, staff } = useAuth()
-const { selected, completed, answers } = useLearning()
+const { selected, solved, totalExercises, answers } = useLearning()
 const current = computed(() => lessons.find(lesson => lesson.id === selected.value) ?? lessons[0]!)
 const started = computed(() => Object.keys(answers.value).length > 0 || current.value !== lessons[0])
 useHead({ title: 'Учебная практика', htmlAttrs: { lang: 'ru' } })
@@ -31,10 +31,8 @@ useHead({ title: 'Учебная практика', htmlAttrs: { lang: 'ru' } })
       </div>
       <div class="dashboard-feature-side">
         <template v-if="user?.role === 'student'">
-          <p class="eyebrow">Самостоятельная программа</p>
-          <p class="dashboard-number">{{ completed }} <span>из {{ lessons.length }}</span></p>
-          <p class="text-sm text-muted">уроков пройдено</p>
-          <div class="progress-track mt-3" role="progressbar" aria-label="Пройденные уроки" :aria-valuenow="completed" :aria-valuemin="0" :aria-valuemax="lessons.length"><span :style="{ transform: 'scaleX(' + completed / lessons.length + ')' }" /></div>
+          <NuxtLink to="/courses/javascript" class="desk-text-button">Основы JavaScript →</NuxtLink>
+          <CourseProgress class="mt-2" :solved="solved" :total="totalExercises" />
         </template>
         <template v-else>
           <p class="desk-row-title">Материалы преподавателей</p>

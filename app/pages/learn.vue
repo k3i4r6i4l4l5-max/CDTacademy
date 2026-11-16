@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { lessons } from '~/data/course'
 useHead({ title: 'JavaScript с нуля — практика', htmlAttrs: { lang: 'ru' }, meta: [{ name: 'description', content: 'Теория JavaScript, практика и задачи с проверкой кода.' }] })
-const { answers, selected, ready, storageError, completed, solved, isComplete, save } = useLearning()
+const { answers, selected, ready, storageError, completed, solved, totalExercises, isComplete, save } = useLearning()
 const route = useRoute()
 const router = useRouter()
 const view = ref<'learn' | 'progress'>('learn')
@@ -11,8 +11,6 @@ const lessonTabs = ref<{ $el: HTMLElement }>()
 const lessonHeading = ref<HTMLHeadingElement>()
 const index = computed(() => Math.max(0, lessons.findIndex(l => l.id === selected.value)))
 const lesson = computed(() => lessons[index.value]!)
-const percent = computed(() => Math.round(completed.value / lessons.length * 100))
-const totalExercises = lessons.reduce((sum, item) => sum + item.theory.length + 1, 0)
 const requestedLesson = computed(() => lessons.find(item => item.id === route.query.lesson))
 const previousLesson = computed(() => lessons[index.value - 1])
 const nextLesson = computed(() => lessons[index.value + 1])
@@ -62,12 +60,7 @@ function choose(id: string) {
         <span class="text-sm font-medium">JavaScript с нуля</span>
         <button class="button-secondary ml-auto shrink-0 lg:hidden" :aria-expanded="mobileMenu" aria-controls="lesson-list" @click="mobileMenu = !mobileMenu">Уроки {{ mobileMenu ? '−' : '+' }}</button>
       </div>
-      <div class="mt-5">
-        <div class="mb-2 flex justify-between gap-2 text-xs text-muted"><span>{{ completed }} из {{ lessons.length }} уроков</span><span>{{ percent }}%</span></div>
-        <div class="progress-track" role="progressbar" :aria-valuenow="percent" :aria-valuemin="0" :aria-valuemax="100" aria-label="Прогресс курса">
-          <span :style="{ transform: `scaleX(${percent / 100})` }" />
-        </div>
-      </div>
+      <CourseProgress class="mt-5" :solved="solved" :total="totalExercises" />
       <nav id="lesson-list" class="mt-4 space-y-0.5 lg:block" :class="mobileMenu ? 'block enter' : 'hidden'" aria-label="Программа JavaScript">
         <button v-for="(item, i) in lessons" :key="item.id" class="lesson-link" :aria-current="item.id === selected && view === 'learn' ? 'step' : undefined" @click="choose(item.id)">
           <span class="w-4 shrink-0 font-mono text-xs" :class="isComplete(item.id) ? 'text-success' : ''" aria-hidden="true">{{ isComplete(item.id) ? '✓' : String(i + 1).padStart(2, '0') }}</span>
@@ -79,7 +72,7 @@ function choose(id: string) {
     <main id="main" class="min-w-0">
       <div v-if="storageError" role="alert" class="mb-5 rounded-md border border-accent p-3 text-sm text-accent">{{ storageError }}</div>
       <template v-if="view === 'learn'">
-        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-muted"><span><NuxtLink to="/lessons" class="text-accent hover:underline">Все уроки</NuxtLink><span class="mx-2 text-[#bbb4a9]">/</span> Урок {{ index + 1 }} из {{ lessons.length }}</span><span>{{ lesson.minutes }} мин · {{ lessonModule(index) }}</span></div>
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-muted"><span><NuxtLink to="/courses/javascript" class="text-accent hover:underline">Основы JavaScript</NuxtLink><span class="mx-2 text-[#bbb4a9]">/</span> Урок {{ index + 1 }} из {{ lessons.length }}</span><span>{{ lesson.minutes }} мин · {{ lessonModule(index) }}</span></div>
         <header :key="lesson.id" class="enter"><p class="eyebrow mb-2">Информатика / Основы JavaScript</p><h1 ref="lessonHeading" tabindex="-1" class="page-title">{{ lesson.title }}</h1><p class="mt-4 max-w-xl text-[15px] leading-7 text-muted">{{ lesson.description }}</p></header>
         <nav class="mt-4 flex flex-wrap gap-x-4 gap-y-1" aria-label="Соседние уроки">
           <button v-if="previousLesson" class="desk-text-button" @click="choose(previousLesson.id)">← Предыдущий урок</button>
@@ -104,7 +97,7 @@ function choose(id: string) {
       </template>
       <template v-else>
         <p class="mb-6 text-xs text-muted">JavaScript с нуля</p><h1 ref="lessonHeading" tabindex="-1" class="page-title enter">Мои результаты</h1><p class="mt-4 text-[15px] leading-7 text-muted">{{ completed === lessons.length ? 'Вы прошли базовую программу JavaScript. Возвращайтесь к задачам, чтобы закрепить знания.' : 'Здесь собраны ваши результаты. Продолжайте с любого урока.' }}</p>
-        <div class="my-9 grid grid-cols-3 border-y border-line py-6"><div><div class="text-3xl">{{ completed }}<span class="text-base text-muted"> / {{ lessons.length }}</span></div><p class="mt-2 text-xs text-muted">Уроков пройдено</p></div><div><div class="text-3xl">{{ solved }}<span class="text-base text-muted"> / {{ totalExercises }}</span></div><p class="mt-2 text-xs text-muted">Ответов принято</p></div><div><div class="text-3xl text-accent">{{ percent }}%</div><p class="mt-2 text-xs text-muted">Программа освоена</p></div></div>
+        <div class="desk-surface desk-form-section my-8"><CourseProgress :solved="solved" :total="totalExercises" /></div>
         <h2 class="mb-4 text-lg">Ваши уроки</h2><div v-for="(item, i) in lessons" :key="item.id" class="flex items-center gap-4 border-b border-line py-5"><span class="font-mono text-xs text-muted">{{ String(i + 1).padStart(2, '0') }}</span><div class="flex-1"><p class="text-sm">{{ item.title }}</p><p class="mt-1 text-xs" :class="isComplete(item.id) ? 'text-success' : 'text-muted'">{{ isComplete(item.id) ? 'Завершён' : Object.keys(answers).some(k => k.startsWith(item.id + ':')) ? 'В процессе' : 'Ещё не начат' }}</p></div><button class="text-sm text-accent" :aria-label="`Открыть урок: ${item.title}`" @click="choose(item.id)">Открыть →</button></div>
       </template>
       <details class="mt-8 border-t border-line pt-4 text-sm text-muted">

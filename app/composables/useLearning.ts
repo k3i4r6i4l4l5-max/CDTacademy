@@ -2,6 +2,10 @@ import { lessons } from '~/data/course'
 import type { Answer } from '../../shared/types/course'
 
 const KEY = 'practice:javascript:v2'
+const exerciseIds = new Set(lessons.flatMap(lesson => [
+  ...lesson.theory.map(section => `${lesson.id}:${section.practice.id}`),
+  `${lesson.id}:code`,
+]))
 
 // Прогресс встроенного курса хранится в браузере отдельно от серверных попыток тестов.
 export function useLearning() {
@@ -9,7 +13,6 @@ export function useLearning() {
   const selected = useState('learning-lesson', () => lessons[0]!.id)
   const ready = useState('learning-ready', () => false)
   const storageError = useState('learning-storage-error', () => '')
-  const ids = new Set(lessons.flatMap(l => [...l.theory.map(t => `${l.id}:${t.practice.id}`), `${l.id}:code`]))
   onMounted(() => {
     // Восстанавливаем из localStorage только известные задания и корректные поля.
     if (ready.value) return
@@ -20,7 +23,7 @@ export function useLearning() {
         if (data.answers && typeof data.answers === 'object') {
           for (const [key, value] of Object.entries(data.answers)) {
             const a = value as Partial<Answer> | null
-            if (ids.has(key) && a && typeof a.value === 'string' && typeof a.passed === 'boolean' && typeof a.feedback === 'string') answers.value[key] = a as Answer
+            if (exerciseIds.has(key) && a && typeof a.value === 'string' && typeof a.passed === 'boolean' && typeof a.feedback === 'string') answers.value[key] = a as Answer
           }
         }
       }
@@ -39,7 +42,7 @@ export function useLearning() {
     return l.theory.every(t => answers.value[`${id}:${t.practice.id}`]?.passed) && Boolean(answers.value[`${id}:code`]?.passed)
   }
   const completed = computed(() => lessons.filter(l => isComplete(l.id)).length)
-  const solved = computed(() => Object.values(answers.value).filter(a => a.passed).length)
+  const solved = computed(() => [...exerciseIds].filter(id => answers.value[id]?.passed).length)
   function save(id: string, value: string, passed = false, feedback = '') { answers.value[id] = { value, passed, feedback } }
-  return { answers, selected, ready, storageError, completed, solved, isComplete, save }
+  return { answers, selected, ready, storageError, completed, solved, totalExercises: exerciseIds.size, isComplete, save }
 }

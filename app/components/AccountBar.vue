@@ -21,7 +21,7 @@ const links = computed(() => staff.value ? staffLinks : [
   ...(user.value ? [{ to: '/tests?view=results', label: 'Мои результаты', icon: 'staff' }] : []),
 ])
 function current(to: string) {
-  if (to === '/lessons') return route.path === '/lessons' || route.path === '/learn'
+  if (to === '/lessons') return route.path === '/lessons' || route.path === '/learn' || route.path === '/courses/javascript'
   if (to === '/tests?view=results') return route.path === '/tests' && route.query.view === 'results'
   if (to === '/tests') return route.path === to && route.query.view !== 'results'
   return route.path === to

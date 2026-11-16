@@ -33,9 +33,7 @@ const groups = computed(() => {
   return [...result]
 })
 
-const { answers, completed, selected, isComplete } = useLearning()
-const started = computed(() => selected.value !== lessons[0]!.id || Object.keys(answers.value).length > 0)
-const attempted = computed(() => new Set(Object.keys(answers.value).map(key => key.split(':')[0])))
+const { solved, totalExercises } = useLearning()
 useHead({ title: 'Учебный каталог — практика' })
 </script>
 
@@ -46,9 +44,6 @@ useHead({ title: 'Учебный каталог — практика' })
         <h1 class="page-title">Учебный каталог</h1>
         <p class="desk-lead">Занятия для самостоятельного обучения и материалы преподавателей.</p>
       </div>
-      <NuxtLink to="/learn" class="button-primary">
-        {{ started ? 'Продолжить обучение' : 'Начать с первого урока' }} <span aria-hidden="true">→</span>
-      </NuxtLink>
     </header>
 
     <section v-if="user" class="desk-section mt-0" aria-labelledby="catalog-materials">
@@ -71,30 +66,17 @@ useHead({ title: 'Учебный каталог — практика' })
       <p v-else class="desk-surface desk-empty text-sm text-muted">{{ published.length ? 'По этим условиям материалов нет.' : 'Здесь появятся материалы после публикации преподавателем.' }}</p>
     </section>
 
-    <section aria-labelledby="lessons-course-title">
-      <header class="desk-section-heading">
-        <div><h2 id="lessons-course-title" class="desk-title">Самостоятельные занятия</h2><p>Информатика / Основы JavaScript · Пройдено {{ completed }} из {{ lessons.length }} уроков</p></div>
-      </header>
-      <ol class="desk-surface desk-list lesson-catalog">
-        <li v-for="(lesson, index) in lessons" :key="lesson.id">
-          <NuxtLink :to="{ path: '/learn', query: { lesson: lesson.id } }" class="desk-row">
-            <div class="flex min-w-0 items-start gap-3">
-              <span class="step-icon font-mono text-xs" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</span>
-              <div class="min-w-0">
-                <h3 class="desk-row-title">{{ lesson.title }}</h3>
-                <p class="mt-1 max-w-prose text-sm text-muted">{{ lesson.description }}</p>
-                <p class="desk-row-meta">
-                  {{ lesson.minutes }} мин · {{ lessonModule(index) }}
-                  <span v-if="isComplete(lesson.id)" class="desk-chip" data-tone="good">Пройден</span>
-                  <span v-else-if="attempted.has(lesson.id)" class="desk-chip">В процессе</span>
-                  <span v-else-if="started && selected === lesson.id" class="desk-chip">Последний открытый</span>
-                </p>
-              </div>
-            </div>
-            <span class="action-arrow text-accent" aria-hidden="true">→</span>
-          </NuxtLink>
-        </li>
-      </ol>
+    <section aria-labelledby="courses-title">
+      <header class="desk-section-heading"><h2 id="courses-title" class="desk-title">Самостоятельные курсы</h2></header>
+      <div class="desk-surface desk-row">
+        <div class="min-w-0">
+          <p class="eyebrow">Информатика</p>
+          <h3 class="desk-row-title mt-1">Основы JavaScript</h3>
+          <p class="desk-row-meta">{{ lessons.length }} уроков · {{ totalExercises }} заданий</p>
+          <CourseProgress class="mt-3 w-64 max-w-full" :solved="solved" :total="totalExercises" />
+        </div>
+        <NuxtLink to="/courses/javascript" class="button-primary">Открыть курс <span aria-hidden="true">→</span></NuxtLink>
+      </div>
     </section>
   </main>
 </template>
