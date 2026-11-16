@@ -7,7 +7,7 @@ const router = useRouter()
 const view = ref<'learn' | 'progress'>('learn')
 const tab = ref<'theory' | 'task'>('theory')
 const mobileMenu = ref(false)
-const lessonTabs = ref<HTMLElement>()
+const lessonTabs = ref<{ $el: HTMLElement }>()
 const lessonHeading = ref<HTMLHeadingElement>()
 const index = computed(() => Math.max(0, lessons.findIndex(l => l.id === selected.value)))
 const lesson = computed(() => lessons[index.value]!)
@@ -37,9 +37,9 @@ function showProgress() {
 function openTask() {
   tab.value = 'task'
   nextTick(() => {
-    const taskTab = lessonTabs.value?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
+    const taskTab = lessonTabs.value?.$el.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
     taskTab?.focus({ preventScroll: true })
-    lessonTabs.value?.scrollIntoView({ block: 'start' })
+    lessonTabs.value?.$el.scrollIntoView({ block: 'start' })
   })
 }
 function choose(id: string) {
@@ -85,10 +85,10 @@ function choose(id: string) {
           <button v-if="previousLesson" class="desk-text-button" @click="choose(previousLesson.id)">← Предыдущий урок</button>
           <button v-if="nextLesson" class="desk-text-button" @click="choose(nextLesson.id)">Следующий урок →</button>
         </nav>
-        <div ref="lessonTabs" class="lesson-tabs mt-6" role="group" aria-label="Раздел урока">
+        <SegmentedControl ref="lessonTabs" class="lesson-tabs mt-6" :count="2" :index="tab === 'theory' ? 0 : 1" role="group" aria-label="Раздел урока">
           <button :aria-pressed="tab === 'theory'" @click="tab = 'theory'">Теория и практика</button>
-          <button :aria-pressed="tab === 'task'" @click="tab = 'task'">Задача <span v-if="answers[`${lesson.id}:code`]?.passed" class="text-success">✓</span></button>
-        </div>
+          <button :aria-pressed="tab === 'task'" @click="tab = 'task'">Задача <span v-if="answers[`${lesson.id}:code`]?.passed" class="lesson-task-complete">✓</span></button>
+        </SegmentedControl>
         <div v-if="tab === 'theory'" :key="lesson.id + '-theory'" class="enter">
           <article v-for="(section, i) in lesson.theory" :key="`${lesson.id}:${i}`" class="border-b border-line py-8 last:border-0">
             <h2 class="text-xl font-medium tracking-[-.3px]">{{ section.title }}</h2><p class="mt-4 text-[15px] leading-[1.85] text-muted">{{ section.text }}</p>

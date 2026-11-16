@@ -165,12 +165,13 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
       </div>
     </header>
 
-    <nav class="admin-section-nav" aria-label="Разделы управления">
-      <button v-for="section in visibleSections" :key="section.id" :class="{ active: tab === section.id }" :aria-pressed="tab === section.id" @click="switchSection(section.id)">
+    <SegmentedControl as="nav" class="admin-section-nav" :count="visibleSections.length"
+      :index="visibleSections.findIndex(section => section.id === tab)" wrap aria-label="Разделы управления">
+      <button v-for="section in visibleSections" :key="section.id" :aria-pressed="tab === section.id" @click="switchSection(section.id)">
         {{ section.label }}
         <span v-if="section.id === 'answers' && pending" class="admin-nav-count" :aria-label="pending + ' на проверке'">{{ pending }}</span>
       </button>
-    </nav>
+    </SegmentedControl>
 
     <p v-if="error" role="alert" class="people-alert people-alert-error">{{ error }}</p>
     <p v-if="success" role="status" class="people-alert people-alert-success enter">{{ success }}</p>

@@ -1,30 +1,4 @@
-.admin-section-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  margin-block: 0 1.65rem;
-  padding: .35rem;
-  border: 1px solid var(--color-line);
-  border-radius: 11px;
-  background: var(--color-soft);
-}
-.admin-section-nav button {
-  display: flex;
-  flex: 1 0 auto;
-  align-items: center;
-  justify-content: center;
-  gap: .45rem;
-  min-height: 39px;
-  padding: .4rem .65rem;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  color: var(--color-muted);
-  font-size: .8125rem;
-  text-align: center;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-.admin-section-nav button:hover { color: var(--color-ink); background: #faf8f2; }
-.admin-section-nav button.active { color: var(--color-ink); background: var(--surface); border-color: var(--color-line); font-weight: 600; }
+.admin-section-nav { margin-block: 0 1.65rem; }
 .admin-nav-count { padding: .05rem .35rem; border-radius: 5px; background: #f4e7d2; color: #75542c; font-size: .7rem; }
 .desk-header.staff-header { margin-bottom: 1.25rem; }
 .staff-header .page-title { font-size: clamp(1.55rem, 3vw, 2.2rem); }
@@ -46,8 +20,4 @@
 @container (max-width: 460px) {
   .roster-row { grid-template-columns: minmax(0, 1fr); }
   .roster-head { display: none; }
-}
-@media (max-width: 640px) {
-  .admin-section-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .admin-section-nav button { padding-inline: .4rem; font-size: .75rem; }
 }

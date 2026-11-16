@@ -2,6 +2,7 @@
 @import "./auth.css";
 @import "./admin.css";
 @import "./workspaces.css";
+@import "./segments.css";
 
 @theme {
   --color-paper: #faf9f5;
@@ -28,6 +29,7 @@
 }
 
 @layer base {
+  html { scrollbar-gutter: stable; }
   body { @apply m-0 bg-paper font-sans text-ink antialiased; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; opacity: .5; }
@@ -328,27 +330,9 @@
 .lesson-link { width: 100%; display: flex; align-items: baseline; gap: .65rem; padding: .55rem .6rem; border-radius: 7px; color: var(--color-muted); text-align: left; font-size: .8125rem; transition: background-color 160ms ease, color 160ms ease; }
 .lesson-link:hover { background: var(--color-soft); color: var(--color-ink); }
 .lesson-link[aria-current] { background: var(--accent-soft); color: var(--accent-hover); font-weight: 600; }
-.lesson-tabs { display: flex; gap: clamp(1rem, 3vw, 1.75rem); border-bottom: 1px solid var(--color-line); scroll-margin-top: .75rem; }
-.lesson-tabs button {
-  position: relative;
-  padding: .65rem 0 .8rem;
-  color: var(--color-muted);
-  font-size: .875rem;
-  font-weight: 500;
-  transition: color 160ms ease;
-}
-.lesson-tabs button:hover { color: var(--color-ink); }
-.lesson-tabs button[aria-pressed=true] { color: var(--color-accent); }
-.lesson-tabs button::after {
-  position: absolute;
-  inset: auto 0 -1px;
-  height: 2px;
-  background: var(--color-accent);
-  content: '';
-  transform: scaleX(0);
-  transition: transform 200ms var(--ease-out);
-}
-.lesson-tabs button[aria-pressed=true]::after { transform: scaleX(1); }
+.lesson-tabs { scroll-margin-top: .75rem; }
+.lesson-task-complete { color: var(--color-success); }
+.lesson-tabs button[aria-pressed="true"] .lesson-task-complete { color: inherit; }
 
 .enter { animation: enter 270ms var(--ease-out) both; }
 .home-course { animation-delay: 85ms; }
@@ -401,7 +385,7 @@
   .enter { animation: none; }
   .popover-enter-active, .popover-leave-active,
   .button-primary, .button-secondary, .action-arrow,
-  .progress-track > span, .lesson-tabs button::after { transition: none; }
+  .progress-track > span { transition: none; }
   .button-primary:active:not(:disabled), .button-secondary:active:not(:disabled),
   a:hover .action-arrow, button:hover .action-arrow { transform: none; }
 }

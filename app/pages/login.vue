@@ -56,7 +56,10 @@ useHead({ title: computed(() => register.value ? 'Регистрация — п�
         <NuxtLink to="/lessons" class="progress-link">Открыть учебный каталог <span class="action-arrow" aria-hidden="true">→</span></NuxtLink>
       </section>
       <section class="auth-card enter" aria-labelledby="auth-title">
-        <div class="auth-tabs" :class="register ? 'show-register' : 'show-login'" role="group" aria-label="Способ входа"><button type="button" :class="{active:!register}" :aria-pressed="!register" :disabled="busy" @click="changeMode(false)">Войти</button><button type="button" :class="{active:register}" :aria-pressed="register" :disabled="busy" @click="changeMode(true)">Зарегистрироваться</button></div>
+        <SegmentedControl class="auth-tabs" :count="2" :index="register ? 1 : 0" role="group" aria-label="Способ входа">
+          <button type="button" :aria-pressed="!register" :disabled="busy" @click="changeMode(false)">Войти</button>
+          <button type="button" :aria-pressed="register" :disabled="busy" @click="changeMode(true)">Зарегистрироваться</button>
+        </SegmentedControl>
         <div :key="String(register)" class="auth-heading enter"><h1 id="auth-title">{{ register ? 'Создайте аккаунт' : 'С возвращением' }}</h1><p>{{ register ? 'Зарегистрируйтесь, чтобы проходить тесты преподавателя.' : 'Выберите роль и войдите в свой аккаунт.' }}</p></div>
         <form class="auth-form" @submit.prevent="submit">
           <label v-if="!register">Тип аккаунта<select v-model="role" :disabled="busy"><option value="teacher">Преподаватель</option><option value="student">Студент</option><option value="admin">Администратор</option></select></label>
