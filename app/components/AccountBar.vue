@@ -14,23 +14,15 @@ const learningLinks = [
 ]
 const staffLinks = [
   { to: '/admin', label: 'Рабочий стол', icon: 'home' },
-  { to: '/admin?section=answers', label: 'Проверка работ', icon: 'tests' },
-  { to: '/admin?section=tests', label: 'Управление тестами', icon: 'tests' },
-  { to: '/admin?section=notes', label: 'Материалы', icon: 'notes' },
-  { to: '/admin?section=people', label: 'Студенты и группы', icon: 'staff' },
-]
-const links = computed(() => staff.value ? [
-  ...staffLinks,
-  ...(user.value?.role === 'admin' ? [{ to: '/admin?section=analytics', label: 'Аналитика', icon: 'staff' }] : []),
   { to: '/lessons', label: 'Учебный каталог', icon: 'learn' },
-] : [
+]
+const links = computed(() => staff.value ? staffLinks : [
   ...learningLinks,
   ...(user.value ? [{ to: '/tests?view=results', label: 'Мои результаты', icon: 'staff' }] : []),
 ])
 function current(to: string) {
   if (to === '/lessons') return route.path === '/lessons' || route.path === '/learn'
-  if (to.includes('?')) return route.path + (route.path === '/admin' ? '?section=' + route.query.section : '?view=' + route.query.view) === to
-  if (to === '/admin') return route.path === to && (!route.query.section || route.query.section === 'overview')
+  if (to === '/tests?view=results') return route.path === '/tests' && route.query.view === 'results'
   if (to === '/tests') return route.path === to && route.query.view !== 'results'
   return route.path === to
 }
