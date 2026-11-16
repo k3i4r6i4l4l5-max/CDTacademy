@@ -52,6 +52,9 @@ async function saveAvatar(file: File | null) {
     avatarBusy.value = false
   }
 }
+function removeAvatar() {
+  if (window.confirm('Удалить аватар?')) void saveAvatar(null)
+}
 function selectAvatar(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -79,7 +82,7 @@ useHead({ title: 'Мой профиль — практика' })
 </script>
 
 <template>
-  <main class="workspace-page workspace-page-narrow">
+  <main class="workspace-page workspace-page-medium profile-page">
     <header class="desk-header enter">
       <div><p class="eyebrow">Личный кабинет</p><h1 class="page-title">Мой профиль</h1></div>
       <NuxtLink :to="isStudent ? '/tests' : '/admin'" class="button-secondary">{{ isStudent ? 'К заданиям' : 'К управлению' }} <span aria-hidden="true">→</span></NuxtLink>
@@ -96,7 +99,7 @@ useHead({ title: 'Мой профиль — практика' })
           <button type="button" class="button-secondary" :disabled="busy || avatarBusy" @click="avatarInput?.click()">
             {{ avatarBusy ? 'Сохраняем…' : user.avatarUrl ? 'Сменить аватар' : 'Загрузить аватар' }}
           </button>
-          <button v-if="user.avatarUrl" type="button" class="desk-text-button" :disabled="busy || avatarBusy" @click="saveAvatar(null)">Удалить аватар</button>
+          <button v-if="user.avatarUrl" type="button" class="desk-text-button" :disabled="busy || avatarBusy" @click="removeAvatar">Удалить аватар</button>
         </div>
         <p class="mt-2 text-xs text-muted">PNG, JPEG или WebP до 5 МБ.</p>
         <p v-if="avatarMessage" role="status" class="mt-2 text-sm text-success">{{ avatarMessage }}</p>

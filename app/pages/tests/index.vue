@@ -9,6 +9,15 @@ usePlatformSync(() => Promise.all([reloadTests(), staff.value ? undefined : refr
 
 const route = useRoute()
 const router = useRouter()
+const resultsOnly = computed(() => !staff.value && route.query.view === 'results')
+const testQuery = ref('')
+const attemptFilter = ref('all')
+const testSubject = ref('')
+const testSubjects = computed(() => subjectOptions(tests.value || []))
+const visibleTests = computed(() => (tests.value || []).filter(test =>
+  (!testSubject.value || subjectOf(test) === testSubject.value) &&
+  [test.title, placementLabel(test.placement)].join(' ').toLocaleLowerCase('ru').includes(testQuery.value.trim().toLocaleLowerCase('ru')),
+))
 const active = ref<TestDefinition | null>(null)
 const values = ref<Record<string, string>>({})
 const error = ref('')
@@ -25,6 +34,12 @@ const answered = computed(() => active.value?.questions.filter(q => values.value
 const attempts = computed(() => (submissions.value || []).slice().sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).map(submission => {
   const result = resultOf(submission)
   return { submission, result, status: attemptStatus(result) }
+}))
+const visibleAttempts = computed(() => attempts.value.filter(({ result }) => {
+  if (!resultsOnly.value || attemptFilter.value === 'all') return true
+  if (attemptFilter.value === 'pending') return result.pending
+  if (attemptFilter.value === 'passed') return result.passed
+  return !result.pending && !result.passed
 }))
 const latestAttempts = computed(() => {
   const byTest = new Map<string, (typeof attempts.value)[number]>()
@@ -87,6 +102,7 @@ function openLinkedTest() {
 }
 onMounted(openLinkedTest)
 watch(() => route.query.id, openLinkedTest)
+watch(resultsOnly, value => { if (value) active.value = null })
 watch(values, () => {
   if (!active.value || staff.value) return
   try {
@@ -134,10 +150,10 @@ useHead({ title: computed(() => (active.value?.title || 'Тесты') + ' — п
       <div class="min-w-0">
         <button v-if="active" class="desk-text-button mb-2" :disabled="busy" @click="closeTest()">← К списку тестов</button>
         <p v-else class="eyebrow">{{ staff ? 'Просмотр для преподавателя' : 'Задания преподавателя' }}</p>
-        <h1 ref="title" class="page-title" tabindex="-1">{{ active?.title || 'Тесты и задания' }}</h1>
-        <p class="desk-lead">{{ active ? 'Порог прохождения — ' + active.passPercent + '%.' : staff ? 'Так опубликованные тесты видят студенты.' : 'Открывайте тесты и возвращайтесь к результатам своих попыток.' }}</p>
+        <h1 ref="title" class="page-title" tabindex="-1">{{ active?.title || (resultsOnly ? 'Мои результаты' : 'Тесты и задания') }}</h1>
+        <p class="desk-lead">{{ active ? 'Порог прохождения — ' + active.passPercent + '%.'  : resultsOnly ? 'Оценки, статусы и комментарии преподавателей.' : staff ? 'Так опубликованные тесты видят студенты.' : 'Открывайте тесты и возвращайтесь к результатам своих попыток.' }}</p>
       </div>
-      <NuxtLink v-if="!active" :to="staff ? '/admin?section=tests' : '/notes'" class="button-secondary">{{ staff ? 'К редактору тестов' : 'К конспектам' }} <span aria-hidden="true">→</span></NuxtLink>
+      <NuxtLink v-if="!active" :to="staff ? '/admin?section=tests' : resultsOnly ? '/tests' : '/notes'" class="button-secondary">{{ staff ? 'К редактору тестов' : resultsOnly ? 'К тестам' : 'К конспектам' }} <span aria-hidden="true">→</span></NuxtLink>
     </header>
 
     <p v-if="loadError" role="alert" class="people-alert people-alert-error">Не удалось загрузить тесты. <button class="underline" @click="reloadTests()">Повторить</button></p>
@@ -190,17 +206,21 @@ useHead({ title: computed(() => (active.value?.title || 'Тесты') + ' — п
     </template>
 
     <template v-else>
-      <section aria-labelledby="available-tests" class="desk-section">
+      <section v-if="!resultsOnly" aria-labelledby="available-tests" class="desk-section">
         <header class="desk-section-heading">
           <h2 id="available-tests" class="desk-title">Доступные тесты</h2>
-          <a v-if="!staff && attempts.length" href="#attempts" class="desk-text-button">Мои результаты ↓</a>
+          <NuxtLink v-if="!staff" to="/tests?view=results" class="desk-text-button">Мои результаты →</NuxtLink>
         </header>
-        <div v-if="tests?.length" class="desk-surface desk-list">
-          <article v-for="test in tests" :key="test.id" class="desk-row">
+        <div v-if="tests?.length" class="desk-surface desk-filter mb-4">
+          <label>Поиск теста<input v-model="testQuery" class="field mt-2" type="search" placeholder="Название или тема"></label>
+          <label v-if="testSubjects.length">Дисциплина<select v-model="testSubject" class="field mt-2"><option value="">Все дисциплины</option><option v-for="value in testSubjects" :key="value">{{ value }}</option></select></label>
+        </div>
+        <div v-if="visibleTests.length" class="desk-surface desk-list">
+          <article v-for="test in visibleTests" :key="test.id" class="desk-row">
             <div class="min-w-0">
               <h3 class="desk-row-title">{{ test.title }}</h3>
               <div class="desk-row-meta">
-                <span>Вопросов: {{ test.questions.length }} · порог {{ test.passPercent }}%</span>
+                <span v-if="placementLabel(test.placement)">{{ placementLabel(test.placement) }}</span><span>Вопросов: {{ test.questions.length }} · порог {{ test.passPercent }}%</span>
                 <span v-if="!staff && latestAttempts.get(test.id)" class="desk-chip" :data-tone="latestAttempts.get(test.id)?.status.tone">{{ latestAttempts.get(test.id)?.status.label }}</span>
               </div>
             </div>
@@ -208,14 +228,17 @@ useHead({ title: computed(() => (active.value?.title || 'Тесты') + ' — п
           </article>
         </div>
         <div v-else-if="!loadError" class="desk-surface desk-empty">
-          <h3>Опубликованных тестов пока нет</h3><p>{{ staff ? 'Опубликуйте тест в редакторе, чтобы он появился здесь.' : 'Здесь появятся задания, когда преподаватель их опубликует.' }}</p>
+          <h3>{{ tests?.length ? 'Тесты не найдены' : 'Опубликованных тестов пока нет' }}</h3><p>{{ tests?.length ? 'Измените поиск или дисциплину.' : staff ? 'Опубликуйте тест в редакторе, чтобы он появился здесь.' : 'Здесь появятся задания, когда преподаватель их опубликует.' }}</p>
         </div>
       </section>
       <section v-if="!staff" class="desk-section" aria-labelledby="attempts">
         <header class="desk-section-heading"><h2 id="attempts" ref="historyTitle" tabindex="-1" class="desk-title">Ваши попытки</h2></header>
         <p v-if="historyError" role="alert" class="people-alert people-alert-error">Не удалось обновить попытки. <button class="underline" @click="refresh()">Повторить</button></p>
-        <div v-if="attempts.length" class="desk-surface desk-list">
-          <details v-for="{ submission, result, status } in attempts" :key="submission.id" class="desk-details">
+        <div v-if="resultsOnly && attempts.length" class="desk-surface desk-filter mb-4">
+          <label>Статус попытки<select v-model="attemptFilter" class="field mt-2"><option value="all">Все статусы</option><option value="pending">На проверке</option><option value="passed">Пройден</option><option value="failed">Не пройден</option></select></label>
+        </div>
+        <div v-if="visibleAttempts.length" class="desk-surface desk-list">
+          <details v-for="{ submission, result, status } in visibleAttempts" :key="submission.id" :open="route.query.attempt === submission.id" class="desk-details">
             <summary class="desk-row">
               <span class="min-w-0"><strong class="desk-row-title">{{ submission.testTitle }}</strong><span class="desk-row-meta">{{ new Date(submission.submittedAt).toLocaleString('ru-RU') }}</span></span>
               <span class="desk-attempt-result"><span class="desk-score">{{ result.percent }}%</span><span class="desk-chip" :data-tone="status.tone">{{ status.label }}</span></span>
@@ -231,7 +254,7 @@ useHead({ title: computed(() => (active.value?.title || 'Тесты') + ' — п
             </div>
           </details>
         </div>
-        <div v-else-if="!historyError" class="desk-surface desk-empty"><h3>Попыток пока нет</h3><p>После отправки теста здесь появятся ответы, оценки и комментарии.</p></div>
+        <div v-else-if="!historyError" class="desk-surface desk-empty"><h3>{{ attempts.length ? 'Попытки не найдены' : 'Попыток пока нет' }}</h3><p>{{ attempts.length ? 'Измените фильтр по статусу.' : 'После отправки здесь появятся ответы, оценки и комментарии.' }}</p></div>
       </section>
     </template>
   </main>

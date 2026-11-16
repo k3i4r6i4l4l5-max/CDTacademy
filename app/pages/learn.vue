@@ -2,6 +2,8 @@
 import { lessons } from '~/data/course'
 useHead({ title: 'JavaScript с нуля — практика', htmlAttrs: { lang: 'ru' }, meta: [{ name: 'description', content: 'Теория JavaScript, практика и задачи с проверкой кода.' }] })
 const { answers, selected, ready, storageError, completed, solved, isComplete, save } = useLearning()
+const route = useRoute()
+const router = useRouter()
 const view = ref<'learn' | 'progress'>('learn')
 const tab = ref<'theory' | 'task'>('theory')
 const mobileMenu = ref(false)
@@ -11,6 +13,16 @@ const index = computed(() => Math.max(0, lessons.findIndex(l => l.id === selecte
 const lesson = computed(() => lessons[index.value]!)
 const percent = computed(() => Math.round(completed.value / lessons.length * 100))
 const totalExercises = lessons.reduce((sum, item) => sum + item.theory.length + 1, 0)
+const requestedLesson = computed(() => lessons.find(item => item.id === route.query.lesson))
+const previousLesson = computed(() => lessons[index.value - 1])
+const nextLesson = computed(() => lessons[index.value + 1])
+
+watch([ready, requestedLesson], ([loaded, item]) => {
+  if (!loaded || !item) return
+  selected.value = item.id
+  view.value = 'learn'
+  tab.value = 'theory'
+}, { immediate: true })
 function focusLessonHeading() {
   nextTick(() => {
     lessonHeading.value?.focus({ preventScroll: true })
@@ -31,6 +43,9 @@ function openTask() {
   })
 }
 function choose(id: string) {
+  if (route.query.lesson !== id) {
+    void router.replace({ query: { ...route.query, lesson: id } })
+  }
   selected.value = id
   view.value = 'learn'
   tab.value = 'theory'
@@ -64,8 +79,12 @@ function choose(id: string) {
     <main id="main" class="min-w-0">
       <div v-if="storageError" role="alert" class="mb-5 rounded-md border border-accent p-3 text-sm text-accent">{{ storageError }}</div>
       <template v-if="view === 'learn'">
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-3 text-xs text-muted"><span>JavaScript с нуля <span class="mx-2 text-[#bbb4a9]">/</span> Урок {{ index + 1 }}</span><span>{{ lesson.minutes }} минут · Начальный уровень</span></div>
-        <header :key="lesson.id" class="enter"><h1 ref="lessonHeading" tabindex="-1" class="page-title">{{ lesson.title }}</h1><p class="mt-4 max-w-xl text-[15px] leading-7 text-muted">{{ lesson.description }}</p></header>
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-muted"><span><NuxtLink to="/lessons" class="text-accent hover:underline">Все уроки</NuxtLink><span class="mx-2 text-[#bbb4a9]">/</span> Урок {{ index + 1 }} из {{ lessons.length }}</span><span>{{ lesson.minutes }} мин · {{ lessonModule(index) }}</span></div>
+        <header :key="lesson.id" class="enter"><p class="eyebrow mb-2">Информатика / Основы JavaScript</p><h1 ref="lessonHeading" tabindex="-1" class="page-title">{{ lesson.title }}</h1><p class="mt-4 max-w-xl text-[15px] leading-7 text-muted">{{ lesson.description }}</p></header>
+        <nav class="mt-4 flex flex-wrap gap-x-4 gap-y-1" aria-label="Соседние уроки">
+          <button v-if="previousLesson" class="desk-text-button" @click="choose(previousLesson.id)">← Предыдущий урок</button>
+          <button v-if="nextLesson" class="desk-text-button" @click="choose(nextLesson.id)">Следующий урок →</button>
+        </nav>
         <div ref="lessonTabs" class="lesson-tabs mt-6" role="group" aria-label="Раздел урока">
           <button :aria-pressed="tab === 'theory'" @click="tab = 'theory'">Теория и практика</button>
           <button :aria-pressed="tab === 'task'" @click="tab = 'task'">Задача <span v-if="answers[`${lesson.id}:code`]?.passed" class="text-success">✓</span></button>
@@ -80,7 +99,7 @@ function choose(id: string) {
         </div>
         <div v-else :key="lesson.id + '-task'" class="enter">
           <CodeTask v-if="ready" :key="lesson.id" :task="lesson.task" :answer="answers[`${lesson.id}:code`]" :input-id="`${lesson.id}-code`" @save="(value, passed, feedback) => save(`${lesson.id}:code`, value, passed, feedback)" />
-          <div class="mt-8 border-t border-line pt-6"><p v-if="isComplete(lesson.id)" role="status" class="mb-4 text-sm text-success">Урок завершён: практика с кодом и задача приняты.</p><p v-else class="mb-4 text-xs leading-6 text-muted">Для завершения урока дайте верные ответы в практике с кодом и пройдите все тесты задачи.</p><button v-if="index < lessons.length - 1" class="button-secondary" @click="choose(lessons[index + 1]!.id)">Следующий урок →</button><button v-else class="button-secondary" @click="showProgress">Посмотреть результаты →</button></div>
+          <div class="mt-8 border-t border-line pt-6"><p v-if="isComplete(lesson.id)" role="status" class="mb-4 text-sm text-success">Урок завершён: практика с кодом и задача приняты.</p><p v-else class="mb-4 text-xs leading-6 text-muted">Для завершения урока дайте верные ответы в практике с кодом и пройдите все тесты задачи.</p><button v-if="nextLesson" class="button-secondary" @click="choose(nextLesson.id)">Следующий урок →</button><button v-else class="button-secondary" @click="showProgress">Посмотреть результаты →</button></div>
         </div>
       </template>
       <template v-else>

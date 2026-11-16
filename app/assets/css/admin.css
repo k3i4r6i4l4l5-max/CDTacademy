@@ -31,7 +31,7 @@
 .people-alert { margin-bottom: 1rem; padding: .75rem 1rem; border: 1px solid; border-radius: 9px; font-size: .875rem; line-height: 1.5; }
 .people-alert-error { border-color: #e8c7b7; background: #faf0e9; color: var(--accent-hover); }
 .people-alert-success { border-color: #d4dfd0; background: #edf3e9; color: var(--color-success); }
-.staff-editor { max-width: 56rem; }
+.staff-editor { max-width: none; }
 .roster { container-type: inline-size; }
 .roster-row { display: grid; align-items: center; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: .85rem; padding: .85rem clamp(.8rem, 2vw, 1.25rem); }
 .roster-admin .roster-row { grid-template-columns: minmax(0, .8fr) minmax(0, 1.1fr) minmax(0, 1.1fr); }

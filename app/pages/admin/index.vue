@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { resultOf } from '#shared/utils/platform'
-import type { TestDefinition, Submission, PublicUser, QuestionType, NoteDefinition } from '../../../shared/types/platform'
+import type { TestDefinition, Submission, PublicUser, StudentGroup, QuestionType, NoteDefinition } from '../../../shared/types/platform'
 const { data: tests, error: testsError, refresh: reloadTests } = await useFetch<TestDefinition[]>('/api/platform/tests')
 const { data: submissions, error: submissionsError, refresh: reloadSubmissions } = await useFetch<Submission[]>('/api/platform/submissions')
 const { data: students, refresh: reloadStudents } = await useFetch<PublicUser[]>('/api/platform/students')
 const { data: library, refresh: reloadLibrary } = await useFetch<NoteDefinition[]>('/api/platform/notes')
+const { data: groupList } = await useFetch<StudentGroup[]>('/api/platform/groups')
 const { user } = useAuth()
 usePlatformSync(() => Promise.all([reloadTests(), reloadSubmissions(), reloadLibrary(), reloadStudents()]))
 const route = useRoute()
@@ -29,8 +30,40 @@ watch(() => library.value?.find(note => note.id === draft.value?.noteId)?.body, 
 const error = ref(''), success = ref(''), busy = ref(false)
 const importingNote = ref(false)
 const filterTest = ref(''), filterStudent = ref(''), maxPercent = ref<number | ''>(''), status = ref('all')
+const filterGroup = ref<string | null>(null)
+const filterSubject = ref('')
+const studentGroups = computed(() => new Map((students.value || []).map(student => [student.id, student.groupId || ''])))
+const testSubjects = computed(() => subjectOptions(tests.value || []))
+const testDiscipline = computed(() => new Map((tests.value || []).map(test => [test.id, subjectOf(test)])))
+const namedGroups = computed(() => (groupList.value || []).map(group => ({
+  ...group,
+  count: (students.value || []).filter(student => student.groupId === group.id).length,
+})))
+const recent = computed(() => (submissions.value || []).slice().sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).slice(0, 5))
+watch(() => route.query, query => {
+  if (query.section !== 'answers') return
+  if (!['group', 'student', 'test'].some(key => typeof query[key] === 'string')) return
+  clearFilters()
+  if (typeof query.group === 'string') filterGroup.value = query.group
+  if (typeof query.student === 'string') filterStudent.value = query.student
+  if (typeof query.test === 'string') filterTest.value = query.test
+}, { immediate: true })
+watch(filterGroup, group => {
+  if (group !== null && filterStudent.value && studentGroups.value.get(filterStudent.value) !== group) filterStudent.value = ''
+})
+const testSubject = ref('')
 const testStatus = ref('all')
 const testQuery = ref('')
+const originalDraft = ref('')
+const dirtyDraft = computed(() => Boolean(draft.value && JSON.stringify(draft.value) !== originalDraft.value))
+const canDiscardDraft = useUnsavedEditor(computed(() => tab.value === 'tests' && dirtyDraft.value))
+function closeDraft() { if (!busy.value && canDiscardDraft()) draft.value = null }
+function focusQuestion(id: string) {
+  document.getElementById('edit-question-' + id)?.focus()
+}
+function removeQuestion(index: number) {
+  if (window.confirm('Удалить вопрос из черновика теста?')) draft.value?.questions.splice(index, 1)
+}
 const editorTitle = ref<HTMLElement>()
 const grades = ref<Record<string, { points: number; comment: string }>>({})
 const attempts = computed(() => (submissions.value || []).map(submission => {
@@ -40,14 +73,28 @@ const attempts = computed(() => (submissions.value || []).map(submission => {
 const pending = computed(() => attempts.value.filter(item => item.result.pending).length)
 const published = computed(() => (tests.value || []).filter(test => test.published).length)
 const filtered = computed(() => attempts.value.filter(({ submission: s, result: r }) => {
-  return (!filterTest.value || s.testId === filterTest.value) && (!filterStudent.value || s.studentId === filterStudent.value) && (maxPercent.value === '' || r.percent <= Number(maxPercent.value)) && (status.value === 'all' || status.value === 'pending' && r.pending || status.value === 'passed' && r.passed || status.value === 'failed' && !r.pending && !r.passed)
+  return (filterGroup.value === null || (studentGroups.value.get(s.studentId) || '') === filterGroup.value) &&
+    (!filterSubject.value || testDiscipline.value.get(s.testId) === filterSubject.value) &&
+    (!filterTest.value || s.testId === filterTest.value) && (!filterStudent.value || s.studentId === filterStudent.value) && (maxPercent.value === '' || r.percent <= Number(maxPercent.value)) && (status.value === 'all' || status.value === 'pending' && r.pending || status.value === 'passed' && r.passed || status.value === 'failed' && !r.pending && !r.passed)
 }))
+const groupStudents = computed(() => {
+  if (filterGroup.value === null) return []
+  const byStudent = new Map<string, typeof filtered.value[number]>()
+  for (const item of filtered.value) {
+    const previous = byStudent.get(item.submission.studentId)
+    if (!previous || item.submission.submittedAt > previous.submission.submittedAt) byStudent.set(item.submission.studentId, item)
+  }
+  return (students.value || [])
+    .filter(student => (student.groupId || '') === filterGroup.value)
+    .map(student => ({ student, latest: byStudent.get(student.id) }))
+})
 const filteredPassed = computed(() => filtered.value.filter(item => item.result.passed))
 const visibleTests = computed(() => (tests.value || []).filter(test => {
   return (testStatus.value === 'all' || test.published === (testStatus.value === 'published')) &&
-    test.title.toLocaleLowerCase().includes(testQuery.value.trim().toLocaleLowerCase())
+    (!testSubject.value || subjectOf(test) === testSubject.value) &&
+    [test.title, placementLabel(test.placement)].join(' ').toLocaleLowerCase('ru').includes(testQuery.value.trim().toLocaleLowerCase('ru'))
 }))
-const isFiltered = computed(() => Boolean(filterTest.value || filterStudent.value || maxPercent.value !== '' || status.value !== 'all'))
+const isFiltered = computed(() => Boolean(filterGroup.value !== null || filterSubject.value || filterTest.value || filterStudent.value || maxPercent.value !== '' || status.value !== 'all'))
 const questionTypes: Record<QuestionType, string> = { text: 'Короткий ответ по эталону', choice: 'Один вариант', free: 'Произвольный текст', code: 'Код JavaScript (ручная оценка)', code_reference: 'Код по эталону' }
 function linkNote(event: Event) {
   if (!draft.value) return
@@ -62,6 +109,8 @@ function switchSection(section: Section) {
   void router.push({ query: { section: section === 'overview' ? undefined : section } })
 }
 function clearFilters() {
+  filterGroup.value = null
+  filterSubject.value = ''
   filterTest.value = ''
   filterStudent.value = ''
   maxPercent.value = ''
@@ -74,12 +123,14 @@ function openQueue() {
 }
 function editDraft(test: TestDefinition) {
   draft.value = structuredClone(toRaw(test))
+  originalDraft.value = JSON.stringify(draft.value)
   error.value = ''
   success.value = ''
   nextTick(() => editorTitle.value?.focus())
 }
 function create() {
   testStatus.value = 'all'
+  testSubject.value = ''
   testQuery.value = ''
   editDraft({ id: '', title: '', notes: '', passPercent: 60, published: false, questions: [], updatedAt: '' })
 }
@@ -125,17 +176,28 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
     <p v-if="success" role="status" class="people-alert people-alert-success enter">{{ success }}</p>
 
     <template v-if="tab === 'overview'">
-      <section class="desk-feature enter" aria-labelledby="staff-next">
+      <section v-if="isAdmin" class="dashboard-feature enter" aria-labelledby="admin-overview">
+        <div class="dashboard-feature-main">
+          <h2 id="admin-overview" class="desk-title">Сводка по обучению</h2>
+          <p>Успеваемость по группам и тестам, участие студентов и работы на проверке.</p>
+          <button class="button-primary" @click="switchSection('analytics')">Смотреть аналитику <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="dashboard-feature-side">
+          <p class="eyebrow">Работ на проверке</p>
+          <p class="dashboard-number">{{ submissionsError ? '—' : pending }}</p>
+          <button class="desk-text-button" @click="openQueue">К очереди проверки →</button>
+        </div>
+      </section>
+      <section v-else class="desk-feature enter" aria-labelledby="staff-next">
         <div>
-          <p class="eyebrow">{{ isAdmin ? 'Обзор платформы' : 'Проверка работ' }}</p>
-          <h2 id="staff-next" class="desk-title mt-2">{{ isAdmin ? 'Сводка по обучению' : submissionsError ? 'Очередь проверки недоступна' : pending ? 'Есть ответы для проверки' : 'Очередь проверки пуста' }}</h2>
-          <p class="mt-3 text-sm">{{ isAdmin ? 'Откройте аналитику, чтобы сравнить результаты по тестам и учебным группам.' : 'Здесь собраны работы с развёрнутыми ответами и кодом, которым нужна ручная оценка.' }}</p>
-          <button class="button-primary mt-4" @click="isAdmin ? switchSection('analytics') : openQueue()">{{ isAdmin ? 'Смотреть аналитику' : 'Открыть очередь проверки' }} <span class="action-arrow" aria-hidden="true">→</span></button>
+          <p class="eyebrow">Проверка работ</p>
+          <h2 id="staff-next" class="desk-title mt-2">{{ submissionsError ? 'Очередь проверки недоступна' : pending ? 'Есть ответы для проверки' : 'Очередь проверки пуста' }}</h2>
+          <p class="mt-3 text-sm">Развёрнутые ответы и код, которым нужна ручная оценка.</p>
+          <button class="button-primary mt-4" @click="openQueue">Открыть очередь проверки <span class="action-arrow" aria-hidden="true">→</span></button>
         </div>
         <div class="desk-feature-side">
           <p class="text-3xl font-serif">{{ submissionsError ? '—' : pending }}</p>
           <p class="mt-1 text-sm">Работ на проверке</p>
-          <button v-if="isAdmin" class="desk-text-button mt-1" @click="openQueue">К очереди проверки <span aria-hidden="true">→</span></button>
         </div>
       </section>
       <p v-if="testsError || submissionsError" role="alert" class="people-alert people-alert-error mt-4">Не удалось обновить часть данных. Повторим при восстановлении соединения.</p>
@@ -144,6 +206,27 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
         <div><dt>Попыток отправлено</dt><dd>{{ submissionsError ? '—' : attempts.length }}</dd></div>
         <div><dt>Студентов</dt><dd>{{ students?.length ?? '—' }}</dd></div>
       </dl>
+      <div class="dashboard-columns desk-section">
+        <section aria-labelledby="staff-recent">
+          <header class="desk-section-heading"><h2 id="staff-recent" class="desk-title">Недавние работы</h2></header>
+          <div v-if="recent.length" class="desk-surface desk-list">
+            <NuxtLink v-for="item in recent" :key="item.id" :to="{ path: '/admin', query: { section: 'answers', student: item.studentId, test: item.testId } }" class="desk-row">
+              <span class="min-w-0"><strong class="desk-row-title">{{ item.testTitle }}</strong><span class="desk-row-meta">{{ item.studentLogin }} · {{ new Date(item.submittedAt).toLocaleDateString('ru-RU') }}</span></span>
+              <span class="desk-chip" :data-tone="attemptStatus(resultOf(item)).tone">{{ attemptStatus(resultOf(item)).label }}</span>
+            </NuxtLink>
+          </div>
+          <p v-else class="desk-surface desk-empty text-sm text-muted">{{ submissionsError ? 'Не удалось загрузить работы.' : 'Студенты ещё не отправили попытки.' }}</p>
+        </section>
+        <section aria-labelledby="staff-groups">
+          <header class="desk-section-heading"><h2 id="staff-groups" class="desk-title">Учебные группы</h2></header>
+          <div class="desk-surface desk-list">
+            <NuxtLink v-for="group in namedGroups" :key="group.id" :to="{ path: '/admin', query: { section: 'answers', group: group.id } }" class="desk-row">
+              <span class="desk-row-title">{{ group.name }}</span><span class="desk-chip">Студентов: {{ group.count }}</span>
+            </NuxtLink>
+            <p v-if="!namedGroups.length" class="desk-row text-sm text-muted">Учебных групп пока нет.</p>
+          </div>
+        </section>
+      </div>
       <section class="desk-section" aria-labelledby="staff-actions">
         <h2 id="staff-actions" class="desk-title mb-3">Быстрые действия</h2>
         <div class="desk-actions">
@@ -163,13 +246,14 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
         <p v-if="testsError" role="alert" class="people-alert people-alert-error">Не удалось загрузить тесты. <button class="underline" @click="reloadTests()">Повторить</button></p>
         <div v-if="tests?.length" class="desk-surface desk-filter mb-4">
           <label>Поиск по названию<input v-model="testQuery" type="search" class="field mt-2" placeholder="Введите название"></label>
+          <label v-if="testSubjects.length">Дисциплина<select v-model="testSubject" class="field mt-2"><option value="">Все дисциплины</option><option v-for="item in testSubjects" :key="item">{{ item }}</option></select></label>
           <label>Публикация<select v-model="testStatus" class="field mt-2"><option value="all">Все тесты</option><option value="published">Опубликованные</option><option value="draft">Черновики</option></select></label>
         </div>
         <div v-if="visibleTests.length" class="desk-surface desk-list">
           <article v-for="test in visibleTests" :key="test.id" class="desk-row">
             <div class="min-w-0">
               <h3 class="desk-row-title">{{ test.title }}</h3>
-              <p class="desk-row-meta"><span class="desk-chip" :data-tone="test.published ? 'good' : undefined">{{ test.published ? 'Опубликован' : 'Черновик' }}</span><span>Вопросов: {{ test.questions.length }} · порог {{ test.passPercent }}%</span></p>
+              <p class="desk-row-meta"><span class="desk-chip" :data-tone="test.published ? 'good' : undefined">{{ test.published ? 'Опубликован' : 'Черновик' }}</span><span v-if="placementLabel(test.placement)">{{ placementLabel(test.placement) }}</span><span>Вопросов: {{ test.questions.length }} · порог {{ test.passPercent }}%</span></p>
             </div>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
               <NuxtLink v-if="test.published" :to="{ path: '/tests', query: { id: test.id } }" class="desk-text-button">Как увидит студент <span aria-hidden="true">→</span></NuxtLink>
@@ -181,11 +265,15 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
       </template>
       <form v-else class="desk-form staff-editor enter" @submit.prevent="save">
         <header>
-          <button type="button" class="desk-text-button mb-2" :disabled="busy" @click="draft = null">← К списку тестов</button>
+          <button type="button" class="desk-text-button mb-2" :disabled="busy" @click="closeDraft">← К списку тестов</button>
           <h2 ref="editorTitle" tabindex="-1" class="desk-title">{{ draft.id ? 'Редактирование теста' : 'Новый тест' }}</h2>
         </header>
+        <nav v-if="draft.questions.length" class="question-index" aria-label="Навигация по вопросам">
+          <button v-for="(question, index) in draft.questions" :key="question.id" type="button" :aria-label="'Вопрос ' + (index + 1)" class="button-secondary" @click="focusQuestion(question.id)">{{ index + 1 }}</button>
+        </nav>
         <section class="desk-surface desk-form-section">
           <h3 class="desk-row-title">Настройки теста</h3>
+          <CurriculumFields v-model="draft.placement" class="mb-4" />
           <div class="grid gap-4 sm:grid-cols-[1fr_minmax(9rem,14rem)]">
             <label>Название<input v-model="draft.title" required maxlength="200" class="field mt-2"></label>
             <label>Порог прохождения, %<input v-model.number="draft.passPercent" type="number" min="0" max="100" step="0.01" required class="field mt-2"></label>
@@ -205,8 +293,8 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
         </details>
         <div class="desk-section-heading mb-0"><h3 class="desk-title">Вопросы</h3><span class="text-sm text-muted">Всего: {{ draft.questions.length }}</span></div>
         <div v-if="!draft.questions.length" class="desk-surface desk-empty"><p>Добавьте вопрос и выберите, как он будет проверяться.</p></div>
-        <section v-for="(q, index) in draft.questions" :key="q.id" class="desk-surface desk-form-section enter">
-          <header class="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 class="desk-row-title">Вопрос {{ index + 1 }}</h4><button type="button" class="desk-text-button" @click="draft.questions.splice(index, 1)">Удалить вопрос</button></header>
+        <section v-for="(q, index) in draft.questions" :id="'edit-question-' + q.id" :key="q.id" tabindex="-1" class="desk-surface desk-form-section enter">
+          <header class="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 class="desk-row-title">Вопрос {{ index + 1 }}</h4><button type="button" class="button-destructive" @click="removeQuestion(index)">Удалить вопрос</button></header>
           <label class="block">Условие<textarea v-model="q.prompt" required rows="3" maxlength="5000" class="field mt-2" /></label>
           <div class="my-4 grid gap-4 sm:grid-cols-[1fr_10rem]">
             <label>Поле ответа<select v-model="q.type" class="field mt-2" @change="q.expected = ''; q.options = []"><option v-for="(label, value) in questionTypes" :key="value" :value="value">{{ label }}</option></select></label>
@@ -225,10 +313,11 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
           <p v-else class="text-sm text-muted">{{ q.type === 'code' ? 'Студент увидит редактор JavaScript.' : 'Студент ответит своими словами.' }} Вы выставите баллы и сможете добавить комментарий.</p>
         </section>
         <button type="button" class="button-secondary justify-self-start" @click="addQuestion">Добавить вопрос +</button>
-        <footer class="desk-surface desk-form-section">
+        <footer class="desk-surface desk-form-section editor-footer">
+          <p class="eyebrow mb-3">{{ dirtyDraft ? 'Есть несохранённые изменения' : 'Публикация' }}</p>
           <label class="flex items-center gap-3 font-medium"><input v-model="draft.published" type="checkbox">Опубликовать для студентов</label>
           <p class="mt-2 text-sm text-muted">Старые попытки сохраняют вопросы и порог на момент отправки.</p>
-          <div class="desk-form-actions pb-0"><button class="button-primary" :disabled="busy || importingNote || !draft.questions.length">{{ busy ? 'Сохраняем…' : 'Сохранить тест' }}</button><button type="button" class="button-secondary" :disabled="busy" @click="draft = null">Отмена</button></div>
+          <div class="desk-form-actions pb-0"><button class="button-primary" :disabled="busy || importingNote || !draft.questions.length">{{ busy ? 'Сохраняем…' : 'Сохранить тест' }}</button><button type="button" class="button-secondary" :disabled="busy" @click="closeDraft">Отмена</button></div>
         </footer>
       </form>
     </template>
@@ -240,8 +329,10 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
       </header>
       <p v-if="submissionsError" role="alert" class="people-alert people-alert-error">Не удалось обновить ответы. <button class="underline" @click="reloadSubmissions()">Повторить</button></p>
       <div class="desk-surface desk-filter">
+        <label>Группа<select v-model="filterGroup" class="field mt-2"><option :value="null">Все группы</option><option value="">Без группы</option><option v-for="group in groupList" :key="group.id" :value="group.id">{{ group.name }}</option></select></label>
+        <label v-if="testSubjects.length">Дисциплина<select v-model="filterSubject" class="field mt-2"><option value="">Все дисциплины</option><option v-for="item in testSubjects" :key="item">{{ item }}</option></select></label>
         <label>Тест<select v-model="filterTest" class="field mt-2"><option value="">Все тесты</option><option v-for="test in tests" :key="test.id" :value="test.id">{{ test.title }}</option></select></label>
-        <label>Студент<select v-model="filterStudent" class="field mt-2"><option value="">Все студенты</option><option v-for="student in students" :key="student.id" :value="student.id">{{ student.login }}</option></select></label>
+        <label>Студент<select v-model="filterStudent" class="field mt-2"><option value="">Все студенты</option><option v-for="student in (students || []).filter(item => filterGroup === null || (item.groupId || '') === filterGroup)" :key="student.id" :value="student.id">{{ student.login }}</option></select></label>
         <label>Процент меньше или равен<input v-model="maxPercent" type="number" min="0" max="100" step="0.01" class="field mt-2" placeholder="Например, 60"></label>
         <label>Статус<select v-model="status" class="field mt-2"><option value="all">Все статусы</option><option value="pending">Ожидает проверки</option><option value="passed">Пройден</option><option value="failed">Не пройден</option></select></label>
       </div>
@@ -249,6 +340,15 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
         <span>Попыток: {{ filtered.length }} · Успешных: {{ filteredPassed.length }} · Уникальных прошедших: {{ new Set(filteredPassed.map(item => item.submission.studentId)).size }}</span>
         <button v-if="isFiltered" class="desk-text-button" @click="clearFilters">Сбросить фильтры</button>
       </div>
+      <section v-if="groupStudents.length && !filterStudent && status === 'all' && maxPercent === ''" class="desk-section mt-0" aria-labelledby="group-detail">
+        <header class="desk-section-heading"><h3 id="group-detail" class="desk-title">Результаты группы</h3><span class="text-xs text-muted">Последняя попытка в выбранных фильтрах</span></header>
+        <div class="desk-surface desk-list">
+          <div v-for="{ student, latest } in groupStudents" :key="student.id" class="desk-row">
+            <button class="desk-text-button" @click="filterStudent = student.id">{{ student.login }} <span aria-hidden="true">→</span></button>
+            <span class="desk-chip" :data-tone="latest?.state.tone">{{ latest ? latest.state.label + (latest.result.pending ? '' : ' · ' + latest.result.percent + '%') : 'Без отправки' }}</span>
+          </div>
+        </div>
+      </section>
       <div v-if="filtered.length" class="desk-surface desk-list">
         <details v-for="{ submission, result, state } in filtered" :key="submission.id" class="desk-details" @toggle="prepare(submission)">
           <summary class="desk-row">
@@ -276,6 +376,6 @@ useHead({ title: computed(() => (isAdmin.value ? 'Кабинет админис�
 
     <NotesManager v-else-if="tab === 'notes'" @changed="reloadLibrary()" />
     <PeopleManager v-else-if="tab === 'people'" />
-    <GlobalAnalytics v-else-if="tab === 'analytics' && isAdmin" />
+    <GlobalAnalytics v-else-if="tab === 'analytics' && isAdmin" :submissions="submissions || []" />
   </main>
 </template>

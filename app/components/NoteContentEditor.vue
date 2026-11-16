@@ -9,6 +9,7 @@ const text = defineModel<string>({ required: true })
 const importing = defineModel<boolean>('importing', { default: false })
 const id = useId()
 const error = ref('')
+const dragging = ref(false)
 const importedFile = ref('')
 const omittedImages = ref(false)
 let disposed = false
@@ -41,6 +42,7 @@ function select(event: Event) {
   if (file) void load(file)
 }
 function drop(event: DragEvent) {
+  dragging.value = false
   const file = event.dataTransfer?.files[0]
   if (file) void load(file)
 }
@@ -50,7 +52,7 @@ function drop(event: DragEvent) {
   <div class="note-compose">
     <div class="note-compose-grid">
       <div class="min-w-0">
-        <div v-if="!readonly" class="note-file-zone" @dragover.prevent @drop.prevent="drop">
+        <div v-if="!readonly" class="note-file-zone" :data-dragging="dragging" @dragover.prevent="dragging = true" @dragleave="dragging = false" @drop.prevent="drop">
           <label :for="id + '-file'" class="font-medium">Импортировать файл</label>
           <p :id="id + '-file-help'" class="mt-1 text-xs text-muted">Выберите или перетащите MD, DOCX или TXT. Импорт заменит текст редактора.</p>
           <input :id="id + '-file'" class="field mt-2" type="file" :accept="noteFileAccept" :aria-describedby="id + '-file-help'" :disabled="disabled || importing" @change="select">

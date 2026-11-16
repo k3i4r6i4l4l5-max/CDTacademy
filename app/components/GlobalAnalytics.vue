@@ -1,4 +1,17 @@
 <script setup lang="ts">
+import type { Submission } from '#shared/types/platform'
+
+const props = defineProps<{ submissions: Submission[] }>()
+const activity = computed(() => {
+  const counts = new Map<string, number>()
+  for (const item of props.submissions) {
+    const day = item.submittedAt.slice(0, 10)
+    counts.set(day, (counts.get(day) || 0) + 1)
+  }
+  const points = [...counts].sort(([a], [b]) => a.localeCompare(b)).slice(-7)
+  const max = Math.max(1, ...points.map(([, count]) => count))
+  return points.map(([day, count]) => ({ day, count, size: count / max }))
+})
 interface Stats {
   attempts: number
   pending: number
@@ -48,12 +61,25 @@ function averageLabel(stats: Stats) {
       </dl>
       <p class="mt-3 text-sm text-muted">Студентов: {{ data.students }} · преподавателей: {{ data.teachers }} · тестов: {{ data.tests }}</p>
 
+      <section class="desk-section" aria-labelledby="analytics-activity">
+        <header class="desk-section-heading"><h3 id="analytics-activity" class="desk-title">Активность по дням</h3><p>Количество отправленных попыток за день (UTC)</p></header>
+        <ul v-if="activity.length" class="desk-surface desk-form-section activity-chart">
+          <li v-for="point in activity" :key="point.day">
+            <time :datetime="point.day">{{ point.day.split('-').slice(1).reverse().join('.') }}</time>
+            <div class="progress-track" aria-hidden="true"><span :style="{ transform: 'scaleX(' + point.size + ')' }" /></div>
+            <span>{{ point.count }}</span>
+          </li>
+        </ul>
+        <p v-else class="desk-surface desk-empty text-sm text-muted">Данные появятся после первой отправленной работы.</p>
+      </section>
+      <div class="dashboard-columns">
       <section v-for="section in breakdowns" :key="section.id" class="desk-section" :aria-labelledby="section.id">
         <h3 :id="section.id" class="desk-title mb-3">{{ section.title }}</h3>
         <div v-if="section.rows.length" class="desk-surface desk-list analytics-list">
           <article v-for="row in section.rows" :key="row.id" class="analytics-row">
             <div class="min-w-0">
               <h4 class="desk-row-title">{{ row.name }}</h4>
+              <NuxtLink :to="{ path: '/admin', query: { section: 'answers', [section.id === 'group-breakdown' ? 'group' : 'test']: row.id } }" class="desk-text-button">Посмотреть работы →</NuxtLink>
               <p class="desk-row-meta">Попыток: {{ row.attempts }} · прошли студентов: {{ row.passedStudents }}<span v-if="row.pending" class="desk-chip" data-tone="waiting">На проверке: {{ row.pending }}</span></p>
             </div>
             <div class="analytics-average">
@@ -64,6 +90,7 @@ function averageLabel(stats: Stats) {
         </div>
         <div v-else class="desk-surface desk-empty"><p>{{ section.empty }}</p></div>
       </section>
+      </div>
     </template>
   </section>
 </template>

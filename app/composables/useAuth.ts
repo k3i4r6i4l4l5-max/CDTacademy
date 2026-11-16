@@ -5,9 +5,13 @@ export function useAuth() {
   const request = useRequestFetch()
   async function refresh() {
     const previousUser = user.value
-    const result = await request<{ user: PublicUser | null }>('/api/platform/me')
+    const result = await request<{ user: PublicUser | null }>('/api/platform/me', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
     // Запоздалый ответ не должен перезаписать выход или сохранённые изменения профиля.
     if (user.value === previousUser) user.value = result.user
+    return result.user
   }
   const staff = computed(() => user.value?.role === 'admin' || user.value?.role === 'teacher')
   async function logout() { await $fetch('/api/platform/logout', { method: 'POST' }); user.value = null; await navigateTo('/') }

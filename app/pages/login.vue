@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import type { PublicUser, Role, StudentGroup } from '../../shared/types/platform'
 definePageMeta({ layout: false })
-const { user } = useAuth()
+const { refresh } = useAuth()
 const route = useRoute()
 const register = ref(route.query.register === '1')
-const role = ref<Role>('student')
+const role = ref<Role>(route.query.role === 'teacher' || route.query.role === 'admin' ? route.query.role : 'student')
+function destination(accountRole: Role, signedUp: boolean) {
+  const next = route.query.next
+  if (typeof next === 'string' && /^\/(?:tests|notes|profile)(?:[?#]|$)/.test(next)) return next
+  if (accountRole !== 'student' && typeof next === 'string' && /^\/admin(?:[?#]|$)/.test(next)) return next
+  return accountRole === 'student' ? (signedUp ? '/tests' : '/') : '/admin'
+}
 const login = ref(''), password = ref('')
 const repeatPassword = ref(''), groupId = ref('')
 const { data: groups } = await useFetch<StudentGroup[]>('/api/platform/groups')
@@ -18,9 +24,16 @@ async function submit() {
   if (register.value && password.value !== repeatPassword.value) { error.value = 'Пароли не совпадают.'; return }
   busy.value = true
   try {
-    const result = await $fetch<{ user: PublicUser }>(register.value ? '/api/platform/register' : '/api/platform/login', { method: 'POST', body: { login: login.value, password: password.value, role: register.value ? 'student' : role.value, groupId: groupId.value } })
-    user.value = result.user
-    await navigateTo(result.user.role === 'student' ? '/tests' : '/admin')
+    const result = await $fetch<{ user: PublicUser }>(register.value ? '/api/platform/register' : '/api/platform/login', { method: 'POST', credentials: 'same-origin', body: { login: login.value.trim(), password: password.value, role: register.value ? 'student' : role.value, groupId: groupId.value } })
+    // Проверяем серверную сессию перед переходом к защищённой странице.
+    const session = await refresh().catch(() => null)
+    if (session?.id !== result.user.id) {
+      error.value = register.value
+        ? 'Аккаунт создан, но открыть сессию не удалось. Перейдите ко входу и используйте только что созданный логин.'
+        : 'Не удалось открыть сессию. Проверьте, разрешены ли файлы cookie для этого сайта, и попробуйте снова.'
+      return
+    }
+    await navigateTo(destination(session.role, register.value), { replace: true })
   } catch (e) {
     const status = (e as { statusCode?: number }).statusCode
     if (status === 401) error.value = 'Неверный логин или пароль. Проверьте язык клавиатуры и регистр символов.'
@@ -40,7 +53,7 @@ useHead({ title: computed(() => register.value ? 'Регистрация — п�
       <section class="auth-intro enter" aria-label="О платформе">
         <p class="auth-display">Ваше пространство для учёбы</p>
         <p>Открывайте материалы преподавателей, выполняйте задания и следите за своими результатами.</p>
-        <NuxtLink to="/learn" class="progress-link">Открыть курс JavaScript <span class="action-arrow" aria-hidden="true">→</span></NuxtLink>
+        <NuxtLink to="/lessons" class="progress-link">Открыть учебный каталог <span class="action-arrow" aria-hidden="true">→</span></NuxtLink>
       </section>
       <section class="auth-card enter" aria-labelledby="auth-title">
         <div class="auth-tabs" :class="register ? 'show-register' : 'show-login'" role="group" aria-label="Способ входа"><button type="button" :class="{active:!register}" :aria-pressed="!register" :disabled="busy" @click="changeMode(false)">Войти</button><button type="button" :class="{active:register}" :aria-pressed="register" :disabled="busy" @click="changeMode(true)">Зарегистрироваться</button></div>

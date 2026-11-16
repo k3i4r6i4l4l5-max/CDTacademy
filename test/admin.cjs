@@ -149,7 +149,7 @@ function client() {
     await route.fulfill({status:response.status,headers:outgoing,body:Buffer.from(await response.arrayBuffer())});
   });
   await page.goto('http://admin.test/admin');
-  await page.waitForURL('**/login');
+  await page.waitForURL(url => url.pathname === '/login' && url.searchParams.get('next') === '/admin');
   await page.getByLabel('Тип аккаунта').selectOption('admin');
   await page.screenshot({path:'test/auth-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
@@ -201,10 +201,18 @@ function client() {
   await page.getByRole('button',{name:'Общая аналитика',exact:true}).click();
   await page.getByRole('heading',{name:'Общая аналитика',exact:true}).waitFor();
   await page.getByRole('heading',{name:'По группам',exact:true}).waitFor();
+  const groupAnalytics=page.locator('#group-breakdown').locator('..');
+  await groupAnalytics.getByRole('link',{name:'Посмотреть работы'}).first().click();
+  await page.getByRole('heading',{name:'Результаты группы',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Общая аналитика',exact:true}).click();
+  await page.getByRole('heading',{name:'По группам',exact:true}).waitFor();
   await page.screenshot({path:'test/analytics-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Конспекты',exact:true}).click();
   await page.getByRole('button',{name:'Добавить конспект +',exact:true}).click();
   await page.getByLabel('Название конспекта',{exact:true}).fill('Материал из интерфейса');
+  await page.getByLabel('Дисциплина',{exact:true}).fill('Информатика');
+  await page.getByLabel('Курс',{exact:true}).fill('Основы программирования');
+  await page.getByLabel('Модуль',{exact:true}).fill('Массивы');
   const noteInput=page.getByLabel('Текст конспекта',{exact:true});
   const fileInput=page.getByLabel('Импортировать файл',{exact:true});
   const preview=page.getByRole('region',{name:'Предпросмотр'});
@@ -252,7 +260,7 @@ function client() {
   await page.getByLabel('Логин',{exact:true}).fill('Студент 1');
   await page.getByLabel('Пароль',{exact:true}).fill('123');
   await page.locator('form').getByRole('button',{name:'Войти',exact:true}).click();
-  await page.waitForURL('**/tests');
+  await page.waitForURL(url => url.pathname === '/');
   // A teacher session publishes updates while a separate student browser stays open.
   await page.goto('http://admin.test/notes');
   let syncNote=await teacher('notes','POST',{title:'Живой конспект',body:'Версия конспекта 1',published:false});
@@ -306,6 +314,7 @@ function client() {
   await page.goto('http://admin.test/notes');
   await page.locator('article').filter({has:page.getByRole('heading',{name:'Материал из интерфейса',exact:true})}).getByRole('button',{name:'Читать конспект'}).click();
   await page.getByText('const x = 2;', {exact:true}).waitFor();
+  await page.getByText('Информатика / Основы программирования / Массивы',{exact:true}).waitFor();
   await page.getByRole('heading',{name:'Материал из Word'}).waitFor();
   await page.getByRole('cell',{name:'Массив',exact:true}).waitFor();
   await page.goto('http://admin.test/tests');
@@ -369,7 +378,23 @@ function client() {
   await page.getByLabel('Учебная группа').selectOption(groups[1].id);
   await page.locator('form').getByRole('button',{name:'Зарегистрироваться',exact:true}).click();
   await page.waitForURL('**/tests');
-
+  const menu = page.getByRole('navigation',{name:'Основная навигация'});
+  await menu.getByRole('link',{name:'Уроки',exact:true}).click();
+  await page.getByRole('heading',{name:'Учебный каталог',exact:true}).waitFor();
+  await menu.getByRole('link',{name:'Тесты',exact:true}).click();
+  await page.waitForURL('**/tests');
+  await page.reload();
+  await page.getByRole('heading',{name:'Тесты и задания',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Личный кабинет',exact:false}).click();
+  await page.getByText('Студент через форму',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Выйти',exact:true}).click();
+  await page.waitForURL('http://admin.test/');
+  await page.goto('http://admin.test/tests');
+  await page.waitForURL(url => url.pathname === '/login' && url.searchParams.get('next') === '/tests');
+  await page.getByLabel('Логин',{exact:true}).fill('Студент через форму');
+  await page.getByLabel('Пароль',{exact:true}).fill('123');
+  await page.locator('form').getByRole('button',{name:'Войти',exact:true}).click();
+  await page.waitForURL('**/tests');
   await page.getByRole('button',{name:'Личный кабинет',exact:false}).click();
   await page.getByRole('button',{name:'Выйти',exact:true}).click();
   await page.waitForURL('http://admin.test/');
@@ -421,6 +446,7 @@ function client() {
   await page.getByRole('button',{name:'Открыть очередь проверки',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Общая аналитика',exact:true}).count(),0);
   await page.goto('http://admin.test/profile');
+  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button',{name:'Удалить аватар',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Аватар удалён.'}).waitFor();
   assert.equal(await avatar.locator('img').count(),0);

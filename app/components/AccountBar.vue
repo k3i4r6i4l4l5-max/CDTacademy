@@ -8,14 +8,32 @@ const error = ref('')
 const trigger = ref<HTMLButtonElement>()
 const learningLinks = [
   { to: '/', label: 'Главная', icon: 'home' },
-  { to: '/learn', label: 'Обучение', icon: 'learn' },
+  { to: '/lessons', label: 'Уроки', icon: 'learn' },
   { to: '/tests', label: 'Тесты', icon: 'tests' },
   { to: '/notes', label: 'Конспекты', icon: 'notes' },
 ]
+const staffLinks = [
+  { to: '/admin', label: 'Рабочий стол', icon: 'home' },
+  { to: '/admin?section=answers', label: 'Проверка работ', icon: 'tests' },
+  { to: '/admin?section=tests', label: 'Управление тестами', icon: 'tests' },
+  { to: '/admin?section=notes', label: 'Материалы', icon: 'notes' },
+  { to: '/admin?section=people', label: 'Студенты и группы', icon: 'staff' },
+]
 const links = computed(() => staff.value ? [
-  { to: '/admin', label: 'Управление', icon: 'staff' },
-  ...learningLinks.slice(1),
-] : learningLinks)
+  ...staffLinks,
+  ...(user.value?.role === 'admin' ? [{ to: '/admin?section=analytics', label: 'Аналитика', icon: 'staff' }] : []),
+  { to: '/lessons', label: 'Учебный каталог', icon: 'learn' },
+] : [
+  ...learningLinks,
+  ...(user.value ? [{ to: '/tests?view=results', label: 'Мои результаты', icon: 'staff' }] : []),
+])
+function current(to: string) {
+  if (to === '/lessons') return route.path === '/lessons' || route.path === '/learn'
+  if (to.includes('?')) return route.path + (route.path === '/admin' ? '?section=' + route.query.section : '?view=' + route.query.view) === to
+  if (to === '/admin') return route.path === to && (!route.query.section || route.query.section === 'overview')
+  if (to === '/tests') return route.path === to && route.query.view !== 'results'
+  return route.path === to
+}
 
 onMounted(() => refresh().catch(() => {}))
 usePlatformSync(() => refresh())
@@ -49,7 +67,9 @@ async function exit() {
     <NuxtLink to="/" class="workspace-brand"><span class="reference-brand-mark" aria-hidden="true">п.</span>практика</NuxtLink>
 
     <nav class="workspace-nav" aria-label="Основная навигация">
-      <NuxtLink v-for="link in links" :key="link.to" :to="link.to">
+      <p class="workspace-nav-label">{{ user ? roleNames[user.role] : 'Учебная платформа' }}</p>
+      <NuxtLink v-for="link in links" :key="link.to" :to="link.to"
+        :data-current="current(link.to)" :aria-current="current(link.to) ? 'page' : undefined">
         <span class="nav-icon" :class="'nav-icon-' + link.icon" aria-hidden="true" />
         {{ link.label }}
       </NuxtLink>

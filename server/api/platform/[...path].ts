@@ -6,6 +6,17 @@ import { resultOf } from '../../../shared/utils/platform'
 
 function fail(statusCode: number, statusMessage: string): never { throw createError({ statusCode, statusMessage }) }
 const text = (value: unknown, max = 20000) => typeof value === 'string' && value.length <= max ? value : fail(400, 'Invalid text')
+function curriculumPlacement(value: unknown, previous?: NoteDefinition['placement']) {
+  if (value === undefined) return previous ? { placement: previous } : {}
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(400, 'Invalid curriculum placement')
+  const input = value as Record<string, unknown>
+  const placement = {
+    subject: text(input.subject, 100).trim(),
+    course: text(input.course, 100).trim(),
+    module: text(input.module, 100).trim(),
+  }
+  return Object.values(placement).some(Boolean) ? { placement } : {}
+}
 function validateAvatar(value: unknown) {
   const encoded = text(value, Math.ceil(avatarStoredLimit / 3) * 4 + 32)
   const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(encoded)
@@ -19,7 +30,7 @@ function validateAvatar(value: unknown) {
   if (!validImage || bytes.length > avatarStoredLimit || bytes.toString('base64') !== data) fail(400, 'Invalid avatar')
   return { type, data, version: randomUUID() }
 }
-function validateTest(body: Record<string, unknown>, id: string): TestDefinition {
+function validateTest(body: Record<string, unknown>, id: string, previous?: TestDefinition): TestDefinition {
   // Формируем допустимый тест из входных данных, не доверяя баллам и типам из формы.
   const title = text(body.title, 200).trim()
   if (!title || !Number.isFinite(body.passPercent) || Number(body.passPercent) < 0 || Number(body.passPercent) > 100) fail(400, 'Title and threshold 0..100 required')
@@ -38,7 +49,7 @@ function validateTest(body: Record<string, unknown>, id: string): TestDefinition
     return { id: typeof q.id === 'string' ? q.id.slice(0, 100) : randomUUID(), prompt, type, options, expected, points }
   })
   if (new Set(questions.map(q => q.id)).size !== questions.length) fail(400, 'Duplicate question IDs')
-  return { id, title, notes: text(body.notes, 100000), noteId: typeof body.noteId === 'string' && body.noteId ? text(body.noteId,100) : null, passPercent: Number(body.passPercent), published: body.published === true, questions, updatedAt: new Date().toISOString() }
+  return { id, title, ...curriculumPlacement(body.placement, previous?.placement), notes: text(body.notes, 100000), noteId: typeof body.noteId === 'string' && body.noteId ? text(body.noteId,100) : null, passPercent: Number(body.passPercent), published: body.published === true, questions, updatedAt: new Date().toISOString() }
 }
 
 export default defineEventHandler(async event => {
@@ -121,7 +132,7 @@ export default defineEventHandler(async event => {
     if (!title || !content.trim()) fail(400, 'Note title and content required')
     const index = noteMatch ? db.notes.findIndex(n => n.id === noteMatch[1]) : -1
     if (noteMatch && index < 0) fail(404, 'Note not found')
-    const note: NoteDefinition = { id: noteMatch ? noteMatch[1]! : randomUUID(), title, body: content, published: body.published === true, updatedAt: new Date().toISOString() }
+    const note: NoteDefinition = { id: noteMatch ? noteMatch[1]! : randomUUID(), title, body: content, ...curriculumPlacement(body.placement, db.notes[index]?.placement), published: body.published === true, updatedAt: new Date().toISOString() }
     if (noteMatch) db.notes[index] = note; else db.notes.push(note)
     saveDatabase(db); return note
   }
@@ -182,7 +193,7 @@ export default defineEventHandler(async event => {
   if (testMatch && method === 'PUT') {
     if (!staff) fail(403, 'Staff only')
     const index = db.tests.findIndex(t => t.id === testMatch[1]); if (index < 0) fail(404, 'Test not found')
-    const test = validateTest(body, testMatch[1]!); checkNote(test); db.tests[index] = test; saveDatabase(db); return presentTest(test)
+    const test = validateTest(body, testMatch[1]!, db.tests[index]); checkNote(test); db.tests[index] = test; saveDatabase(db); return presentTest(test)
   }
   if (path === 'submissions' && method === 'GET') return db.submissions.filter(s => staff || s.studentId === user.id)
   if (path === 'students' && method === 'GET') {
